@@ -1,0 +1,113 @@
+@import 'tailwindcss';
+@custom-variant dark (&:where(.dark, .dark *));
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../views/filament/resources/events/pages/*.blade.php';
+@source '../**/*.js';
+@source '../../vendor/filament/**/resources/views/**/*.blade.php';
+@source '../../vendor/filament-panels/**/resources/views/**/*.blade.php';
+@source '../../vendor/filament-actions/**/resources/views/**/*.blade.php';
+@source '../../vendor/filament-forms/**/resources/views/**/*.blade.php';
+@source '../../vendor/filament-infolists/**/resources/views/**/*.blade.php';
+@source '../../vendor/filament-notifications/**/resources/views/**/*.blade.php';
+@source '../../vendor/filament-tables/**/resources/views/**/*.blade.php';
+@source '../../vendor/filament-widgets/**/resources/views/**/*.blade.php';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+.fi-layout {
+    --fi-topbar-height: 2rem;
+}
+
+/* FullCalendar Custom Styles */
+.fc {
+    font-family: inherit;
+    height: 100% !important;
+    max-height: 100% !important;
+}
+
+.fc-view-harness {
+    height: 100% !important;
+    max-height: 100% !important;
+}
+
+.fc-scroller {
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+/* Ensure timegrid scroller works properly */
+.fc-timegrid .fc-scroller {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+/* Make scrollbar visible */
+.fc-scroller::-webkit-scrollbar {
+    width: 8px;
+}
+
+.fc-scroller::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.fc-scroller::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.fc-scroller-liquid-absolute {
+    position: relative !important;
+}
+
+/* Ensure timegrid views can scroll */
+.fc-timegrid-body {
+    overflow: visible !important;
+}
+
+
+.fc-event {
+    border-left-width: 4px;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+}
+
+.fc-event-title {
+    font-weight: 500;
+    color: #111827;
+    font-size: 0.75rem;
+}
+
+.fc-timegrid-slot {
+    height: 10vh !important;
+}
+
+.fc-timegrid-now-indicator-line {
+    border-color: #2563eb;
+    border-width: 1px;
+}
+
+.fc-timegrid-now-indicator-arrow {
+    border-color: #2563eb;
+}
+
+.fc-timegrid-col {
+    border-color: #e5e7eb;
+}
+
+.fc-timegrid-slot-label {
+    border-color: #e5e7eb;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
