@@ -43,7 +43,11 @@ class ArchivedTodolists extends ListRecords
                     ->sortable(),
             ])
             ->filters([
-                //
+                Tables\Filters\ToggleFilter::make('self_only')
+                    ->label('Show Self Only')
+                    ->query(fn (Builder $query) => $query->whereHas('pics', fn ($q) => $q->where('user_id', auth()->id())))
+                    ->default(true)
+                    ->visible(fn () => in_array(auth()->user()->role?->role, ['Superadmin', 'Tenant admin', 'Manager'])),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

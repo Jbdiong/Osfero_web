@@ -10,6 +10,13 @@ class ListTodolists extends ListRecords
 {
     protected static string $resource = TodolistResource::class;
 
+    public bool $viewEveryone = false;
+
+    public function toggleEveryone()
+    {
+        $this->viewEveryone = !$this->viewEveryone;
+    }
+
     public function getView(): string
     {
         return 'filament.resources.todolists.pages.kanban';
@@ -21,24 +28,34 @@ class ListTodolists extends ListRecords
         $statusParent = \App\Models\Lookup::where('name', 'Todolist Status')->first();
         $statuses = $statusParent ? \App\Models\Lookup::where('parent_id', $statusParent->id)->get() : collect();
         
-        // 2. Get Active Tasks (Not Completed)
-        $activeTasks = \App\Models\Todolist::with(['priority', 'status', 'children'])
-            ->where('tenant_id', auth()->user()->tenant_id)
+        // 2. Base Query using the resource's Eloquent Query
+        $isManager = in_array(auth()->user()?->role?->role, ['Superadmin', 'Tenant admin', 'Manager']);
+        
+        $baseQuery = static::getResource()::getEloquentQuery()
+            ->with(['priority', 'status', 'children']);
+
+        if ($isManager && !$this->viewEveryone) {
+            $baseQuery->whereHas('pics', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        }
+
+        // 3. Get Active Tasks (Not Completed)
+        $activeTasks = (clone $baseQuery)
             ->whereHas('status', fn ($q) => $q->where('name', '!=', 'Completed'))
             ->whereNull('parent_id')
             ->orderBy('end_date', 'asc')
             ->get();
 
-        // 3. Get Recent Completed Tasks (Max 10)
-        $recentCompletedTasks = \App\Models\Todolist::with(['priority', 'status', 'children'])
-            ->where('tenant_id', auth()->user()->tenant_id)
+        // 4. Get Recent Completed Tasks (Max 10)
+        $recentCompletedTasks = (clone $baseQuery)
             ->whereHas('status', fn ($q) => $q->where('name', 'Completed'))
             ->whereNull('parent_id')
             ->orderBy('updated_at', 'desc') // Show most recently completed first
             ->limit(10)
             ->get();
 
-        // 4. Merge them
+        // 5. Merge them
         $todolists = $activeTasks->merge($recentCompletedTasks);
 
         return [

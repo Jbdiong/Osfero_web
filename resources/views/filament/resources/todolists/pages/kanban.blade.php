@@ -27,6 +27,16 @@
         class="flex flex-col gap-4 overflow-x-auto h-full pb-4"
         x-data="{ draggingId: null }"
     >
+        @if(in_array(auth()->user()?->role?->role, ['Superadmin', 'Tenant admin', 'Manager']))
+            <div class="flex justify-end pr-4 mb-2">
+                <div class="flex items-center cursor-pointer select-none" wire:click="toggleEveryone" wire:key="everyone-toggle-wrapper">
+                    <span class="mr-3 text-sm font-medium text-gray-900 dark:text-gray-300">Show Everyone Todolist</span>
+                    <div class="relative w-12 h-5.5 flex items-center rounded-full p-1 transition-colors duration-200 {{ $viewEveryone ? 'bg-primary-600 justify-end' : 'bg-gray-300 dark:bg-gray-700 justify-start' }}">
+                        <div class="w-4 h-4 bg-white rounded-full shadow-sm ring-0 transition-all duration-200 ease-in-out"></div>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         <div class="flex gap-4 min-w-full h-full">
             @foreach ($statuses as $status)

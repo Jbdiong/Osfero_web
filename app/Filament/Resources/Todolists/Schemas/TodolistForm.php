@@ -34,8 +34,11 @@ class TodolistForm
                                     \Filament\Forms\Components\Section::make('Dates')
                                     ->schema([
                                         DatePicker::make('start_date')
+                                            ->native(false)
+                                            ->default(now())
                                             ->required(),
                                         DatePicker::make('end_date')
+                                            ->native(false)
                                             ->required()
                                             ->afterOrEqual('start_date'),
                                     ]),
@@ -51,8 +54,10 @@ class TodolistForm
                                             ->relationship('status', 'name', fn ($query) => $query->whereHas('parent', fn ($q) => $q->where('name', 'Todolist Status'))->orderBy('id'))
                                             ->required()
                                             ->default(fn () => \App\Models\Lookup::whereHas('parent', fn ($q) => $q->where('name', 'Todolist Status'))->where('name', 'To do')->first()?->id),
-                                        DatePicker::make('start_date'),
+                                        DatePicker::make('start_date')
+                                            ->native(false),
                                         DatePicker::make('end_date')
+                                            ->native(false)
                                             ->afterOrEqual('start_date'),
                                         \Filament\Forms\Components\Hidden::make('tenant_id')
                                             ->default(fn () => auth()->user()?->tenant_id),

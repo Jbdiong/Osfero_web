@@ -21,8 +21,18 @@ class TodolistResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $query = parent::getEloquentQuery()
             ->where('tenant_id', auth()->user()?->tenant_id);
+
+        $isManager = in_array(auth()->user()?->role?->role, ['Superadmin', 'Tenant admin', 'Manager']);
+
+        if (!$isManager) {
+            $query->whereHas('pics', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        }
+
+        return $query;
     }
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
@@ -33,14 +43,11 @@ class TodolistResource extends Resource
     
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::whereDate('end_date', '<=', now())
+        return static::getEloquentQuery()
+            ->whereDate('end_date', '<=', now())
             ->whereHas('status', function ($query) {
                 $query->where('name', '!=', 'Completed');
             })
-            ->when(
-                \Illuminate\Support\Facades\Auth::check() && \Illuminate\Support\Facades\Auth::user()->tenant_id,
-                fn ($query) => $query->where('tenant_id', \Illuminate\Support\Facades\Auth::user()->tenant_id)
-            )
             ->count() ?: null;
     }
 
