@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::table('locations', function (Blueprint $table) {
             $table->unsignedBigInteger('tenant_id')->after('id')->nullable();
             $table->unsignedBigInteger('warehouse_id')->nullable()->change();
-
+            
             $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
         });
     }

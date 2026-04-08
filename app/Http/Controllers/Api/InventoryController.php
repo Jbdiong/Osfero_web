@@ -48,25 +48,29 @@ class InventoryController extends Controller
             // Handle location
             $locationId = $request->location_id;
             if (!$locationId && $request->filled('location_name')) {
-                $location = \App\Models\Location::firstOrCreate(
-                    ['name' => $request->location_name, 'tenant_id' => $request->user()->tenant_id],
-                    ['tenant_id' => $request->user()->tenant_id]
-                );
-                $locationId = $location->id;
+                $locationId = DB::table('locations')->insertGetId([
+                    'tenant_id' => $request->user()->tenant_id,
+                    'name' => $request->location_name,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
 
             if (!$locationId) {
                 // Use or create a default location for this tenant
-                $defaultLocation = \App\Models\Location::where('tenant_id', $request->user()->tenant_id)->first();
+                $defaultLocation = DB::table('locations')
+                    ->where('tenant_id', $request->user()->tenant_id)
+                    ->first();
                 if ($defaultLocation) {
                     $locationId = $defaultLocation->id;
                 } else {
-                    $loc = \App\Models\Location::create([
+                    $locationId = DB::table('locations')->insertGetId([
                         'tenant_id' => $request->user()->tenant_id,
                         'name' => 'Default',
                         'is_default' => true,
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ]);
-                    $locationId = $loc->id;
                 }
             }
 
@@ -195,7 +199,8 @@ class InventoryController extends Controller
             DB::beginTransaction();
 
             $categoryId = $request->category_id;
-
+            
+            // If they provided a name but no ID (new category typed in)
             if (!$categoryId && $request->filled('category_name')) {
                 $category = Category::firstOrCreate([
                     'tenant_id' => $request->user()->tenant_id,
@@ -205,7 +210,8 @@ class InventoryController extends Controller
             }
 
             $category = $categoryId ? Category::find($categoryId) : null;
-
+            
+            // Update the category's template if it's currently empty, to be used for future items!
             if ($category && $request->filled('variant_specs') && empty($category->template_schema)) {
                 $category->template_schema = $request->variant_specs;
                 $category->save();
@@ -231,7 +237,11 @@ class InventoryController extends Controller
                 $locationId = $location->id;
             }
 
+            // Auto inherit template schema if specs are empty
             $specs = $category ? $category->template_schema : null;
+            if ($request->has('specs') && $request->specs) {
+                $specs = $request->specs;
+            }
 
             $item = Item::create([
                 'tenant_id' => $request->user()->tenant_id,
@@ -243,8 +253,9 @@ class InventoryController extends Controller
             ]);
 
             // Generate variants from cartesian product of attribute options
-            $variantSpecs = $request->variant_specs ?? [];
+            $variantSpecs = $request->variant_specs ?? []; // [{attribute: 'Color', options: ['Red','Blue']}, ...]
 
+            // Build cartesian product of all option values
             $combinations = [[]];
             foreach ($variantSpecs as $spec) {
                 $newCombinations = [];
@@ -256,11 +267,13 @@ class InventoryController extends Controller
                 $combinations = $newCombinations;
             }
 
+            // If no variant specs, create a single default variant
             if (empty($combinations) || $combinations === [[]]) {
                 $combinations = [[]];
             }
 
             $variantIndex = 1;
+            $firstVariant = null;
             foreach ($combinations as $combo) {
                 $variantSku = $request->base_sku
                     ? ($request->base_sku . '_' . $variantIndex)
@@ -271,9 +284,12 @@ class InventoryController extends Controller
                     'sku' => $variantSku,
                     'barcode' => $variantIndex === 1 ? $request->barcode : null,
                     'min_stock_level' => $request->min_stock_level ?? 0,
-                    'variant_specs' => empty($combo) ? null : $combo,
+                    'variant_specs' => empty($combo) ? null : $combo, // e.g. {"Color": "Red"}
                 ]);
 
+                if ($variantIndex === 1) $firstVariant = $variant;
+
+                // Add Initial Stock for first variant only (or all if qty provided)
                 $qty = (float) $request->quantity;
                 if ($qty > 0 && $locationId) {
                     DB::table('stocks')->insert([
@@ -337,7 +353,7 @@ class InventoryController extends Controller
         ]);
 
         $folder = Category::where('tenant_id', $request->user()->tenant_id)->findOrFail($id);
-
+        
         if ($request->parent_id == $folder->id) {
             return response()->json(['status' => 'error', 'message' => 'Cannot move a folder into itself.'], 400);
         }
@@ -388,10 +404,10 @@ class InventoryController extends Controller
 
             $locationId = $request->location_id;
             if (!$locationId && $request->filled('location_name')) {
-                $location = \App\Models\Location::firstOrCreate(
-                    ['name' => $request->location_name, 'tenant_id' => $request->user()->tenant_id],
-                    ['tenant_id' => $request->user()->tenant_id]
-                );
+                $location = \App\Models\Location::firstOrCreate([
+                    'tenant_id' => $request->user()->tenant_id,
+                    'name' => $request->location_name,
+                ]);
                 $locationId = $location->id;
             }
 
@@ -403,7 +419,7 @@ class InventoryController extends Controller
             $item->brand_id = $brandId;
             $item->save();
 
-            // Update first variant barcode/specs
+            // Update first variant for simplicity
             $variant = $item->variants()->first();
             if ($variant) {
                 if ($request->has('barcode')) {
@@ -416,11 +432,12 @@ class InventoryController extends Controller
             }
 
             if ($locationId) {
-                // Update or consolidate stocks to the new location for all variants
+                // Update or merge stocks to the new location for all variants
                 foreach ($item->variants as $variant) {
                     $stocks = DB::table('stocks')->where('variant_id', $variant->id)->get();
-
+                    
                     if ($stocks->isEmpty()) {
+                        // Create a default stock for the variant if it doesn't have any
                         DB::table('stocks')->insert([
                             'variant_id' => $variant->id,
                             'location_id' => $locationId,
@@ -433,6 +450,7 @@ class InventoryController extends Controller
                             ->where('variant_id', $variant->id)
                             ->update(['location_id' => $locationId, 'updated_at' => now()]);
                     } else {
+                        // If they have multiple stocks across different locations, consolidate them into the new location
                         $totalQty = $stocks->sum('quantity');
                         DB::table('stocks')->where('variant_id', $variant->id)->delete();
                         DB::table('stocks')->insert([

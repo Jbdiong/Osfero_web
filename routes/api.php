@@ -71,3 +71,4 @@ Route::prefix('v1')->group(function () {
         return response()->json(['message' => 'Unauthenticated.'], 401);
     })->name('login');
 });
+
