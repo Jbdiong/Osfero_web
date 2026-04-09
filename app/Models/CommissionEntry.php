@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CommissionEntry extends Model
 {
@@ -73,9 +75,22 @@ class CommissionEntry extends Model
     {
         return match ($this->type) {
             'design'         => 'Design',
+            'video'          => 'Video',
             'ads_management' => 'Ads Management',
             'sales'          => 'Sales',
             default          => ucfirst($this->type),
         };
+    }
+
+    public function pics(): HasMany
+    {
+        return $this->hasMany(CommissionPic::class, 'commission_entry_id');
+    }
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'commission_pics', 'commission_entry_id', 'user_id')
+                    ->withPivot(['split_percentage', 'tenant_id'])
+                    ->withTimestamps();
     }
 }

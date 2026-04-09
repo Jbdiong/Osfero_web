@@ -20,13 +20,23 @@ class TodolistController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $todolists = Todolist::query()
+        $query = Todolist::query()
             ->where('tenant_id', $user->tenant_id)
-            ->whereNull('parent_id') // Only top-level tasks
-            ->with(['children' => function ($query) {
+            ->whereNull('parent_id'); // Only top-level tasks
+
+        $canViewEveryone = in_array(optional($user->role)->role, ['Superadmin', 'Tenant admin', 'Manager']);
+        $wantsToViewEveryone = $request->query('view_everyone') == '1';
+
+        if (!$canViewEveryone || !$wantsToViewEveryone) {
+            $query->whereHas('todolistPICs', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        }
+
+        $todolists = $query->with(['children' => function ($q) {
                 // Subtasks - we only need the title for the "point form"
-                $query->select('id', 'parent_id', 'Title', 'status_id'); 
-            }, 'status', 'priority', 'todolistPICs.user']) // Changed pics.user to todolistPICs.user
+                $q->select('id', 'parent_id', 'Title', 'status_id'); 
+            }, 'status', 'priority', 'todolistPICs.user'])
             ->orderBy('created_at', 'desc')
             ->get();
 

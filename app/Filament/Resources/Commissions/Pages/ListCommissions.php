@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\Commissions\CommissionResource\Pages;
+namespace App\Filament\Resources\Commissions\Pages;
 
 use App\Filament\Resources\Commissions\CommissionResource;
 use App\Models\CommissionEntry;
@@ -19,7 +19,7 @@ class ListCommissions extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()->label('Log Entry'),
+            Actions\CreateAction::make()->label('New Commission'),
         ];
     }
 

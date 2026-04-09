@@ -104,7 +104,11 @@ class CommissionSummary extends Page implements HasForms
 
         $rows = $staffList->map(function (User $staff) use ($tenantId, $settings, $fYear, $fMonth) {
             $baseQuery = CommissionEntry::where('tenant_id', $tenantId)
-                ->where('user_id', $staff->id);
+                ->where(function ($query) use ($staff) {
+                    $query->where('user_id', $staff->id)
+                          ->orWhereHas('users', fn ($q) => $q->where('users.id', $staff->id));
+                })
+                ->with('users');
 
             if ($fYear) {
                 $baseQuery->where('year', $fYear);
@@ -131,16 +135,42 @@ class CommissionSummary extends Page implements HasForms
                 ];
             }
 
-            // -- Design: sum approved quantities → apply bonus on total
-            $designQtyApproved = (int) $approved->where('type', 'design')->sum('quantity');
-            $designComm = $settings->designCommission($designQtyApproved);
+            $designQtyApproved = 0.0;
+            $adsClientsApproved = 0.0;
+            $salesValueApproved = 0.0;
 
-            // -- Ads: each logged approved client = one ads_fee
-            $adsClientsApproved = $approved->where('type', 'ads_management')->count();
+            foreach ($approved as $entry) {
+                $pics = $entry->users;
+                
+                // If PICs exist via the pivot table
+                if ($pics->count() > 0) {
+                    $pic = $pics->firstWhere('id', $staff->id);
+                    if (! $pic) continue; // Staff is not a PIC for this entry
+                    $pct = (float) $pic->pivot->split_percentage / 100;
+                } else {
+                    // Legacy data or no pivot (fallback to user_id)
+                    if ($entry->user_id !== $staff->id) continue;
+                    $pct = 1.0;
+                }
+
+                if ($entry->type === 'design') {
+                    $designQtyApproved += ($entry->quantity * $pct);
+                } elseif ($entry->type === 'video') {
+                    // 1 video counts as 2x design
+                    $designQtyApproved += ($entry->quantity * 2 * $pct);
+                } elseif ($entry->type === 'ads_management') {
+                    // Ads fee is divided equally based on split percentage
+                    $adsClientsApproved += (1 * $pct); 
+                } elseif ($entry->type === 'sales') {
+                    $salesValueApproved += ($entry->package_value * $pct);
+                }
+            }
+
+            $designQtyApprovedInt = (int) round($designQtyApproved);
+
+            // -- Calculate Commissions
+            $designComm = $settings->designCommission($designQtyApprovedInt);
             $adsComm    = $adsClientsApproved * $settings->adsCommissionPerClient();
-
-            // -- Sales: sum approved package values × rate
-            $salesValueApproved = (float) $approved->where('type', 'sales')->sum('package_value');
             $salesComm  = $settings->salesCommission($salesValueApproved);
 
             $total = $designComm + $adsComm + $salesComm;

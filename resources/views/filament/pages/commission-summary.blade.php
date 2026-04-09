@@ -70,7 +70,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-white/5">
                         @foreach ($rows as $index => $row)
-                            <tr class="{{ $index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800/50' }}">
+                            <tr class="{{ $index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-white/5' }}">
                                 <td class="py-3 px-4 font-medium text-gray-800 dark:text-gray-100 flex items-center gap-2">
                                     {{ $row['name'] }}
                                     @if ($row['pendingCount'] > 0)

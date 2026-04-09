@@ -29,6 +29,8 @@ Route::prefix('v1')->group(function () {
         // Commission routes
         Route::get('/commission/summary', [\App\Http\Controllers\Api\CommissionController::class, 'summary']);
         Route::post('/commission/store', [\App\Http\Controllers\Api\CommissionController::class, 'store']);
+        Route::put('/commission/{id}', [\App\Http\Controllers\Api\CommissionController::class, 'update']);
+        Route::delete('/commission/{id}', [\App\Http\Controllers\Api\CommissionController::class, 'destroy']);
         Route::post('/commission/{id}/approve', [\App\Http\Controllers\Api\CommissionController::class, 'approve']);
         Route::post('/commission/{id}/reject', [\App\Http\Controllers\Api\CommissionController::class, 'reject']);
 

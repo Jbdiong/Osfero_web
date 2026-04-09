@@ -33,40 +33,72 @@ class CommissionController extends Controller
             ->where('month', $month);
 
         if (! $isManager) {
-            $baseQuery->where('user_id', $user->id);
+            $baseQuery->whereHas('users', fn($q) => $q->where('user_id', $user->id));
         } elseif ($staffId) {
-            $baseQuery->where('user_id', $staffId);
+            $baseQuery->whereHas('users', fn($q) => $q->where('user_id', $staffId));
         }
 
-        $allEntries = $baseQuery->get();
-        $approved   = $allEntries->where('is_approved', true);
+        // We load the users relation to calculate specific percentages if needed
+        $allEntries = $baseQuery->with('users')->get();
+        
+        // Target user for calculating personal totals (if not manager, or if specifically filtering for a staff)
+        $targetUserId = (! $isManager) ? $user->id : ($staffId ? $staffId : null);
+
+        $calculateTypeTotal = function($type, $isApproved) use ($allEntries, $targetUserId) {
+            $total = 0;
+            $entries = $allEntries->whereIn('type', (array) $type);
+            if ($isApproved) {
+                $entries = $entries->where('is_approved', true);
+            } else {
+                $entries = $entries->where('is_rejected', false);
+            }
+
+            foreach ($entries as $e) {
+                $multiplier = ($e->type === 'video') ? 2 : 1;
+                $value = in_array($e->type, ['design', 'video']) ? ($e->quantity * $multiplier) : 
+                        ($e->type === 'ads_management' ? 1 : $e->package_value);
+
+                if ($targetUserId) {
+                    $pivot = $e->users->firstWhere('id', $targetUserId);
+                    if ($pivot) {
+                        $split = $pivot->pivot->split_percentage ?? 100;
+                        $total += $value * ($split / 100);
+                    }
+                } else {
+                    // For manager viewing the whole team, we just sum up the full value since it represents the team total
+                    $total += $value;
+                }
+            }
+            return $total;
+        };
 
         // --- Aggregates (Personal if staff, Tenant/Filtered if manager) ---
-        $designQtyApproved = (int) $approved->where('type', 'design')->sum('quantity');
-        $designQtyTotal    = (int) $allEntries->where('type', 'design')->where('is_rejected', false)->sum('quantity');
+        $designQtyApproved = (int) $calculateTypeTotal(['design', 'video'], true);
+        $designQtyTotal    = (int) $calculateTypeTotal(['design', 'video'], false);
         $designComm = $settings->designCommission($designQtyApproved);
         
-        $adsClientsApproved = $approved->where('type', 'ads_management')->count();
-        $adsClientsTotal    = $allEntries->where('type', 'ads_management')->where('is_rejected', false)->count();
+        $adsClientsApproved = (int) $calculateTypeTotal('ads_management', true);
+        $adsClientsTotal    = (int) $calculateTypeTotal('ads_management', false);
         $adsComm    = $adsClientsApproved * $settings->adsCommissionPerClient();
 
-        $salesValueApproved = (float) $approved->where('type', 'sales')->sum('package_value');
-        $salesValueTotal    = (float) $allEntries->where('type', 'sales')->where('is_rejected', false)->sum('package_value');
+        $salesValueApproved = (float) $calculateTypeTotal('sales', true);
+        $salesValueTotal    = (float) $calculateTypeTotal('sales', false);
         $salesComm  = $settings->salesCommission($salesValueApproved);
 
         $totalApproved = $designComm + $adsComm + $salesComm;
 
         // --- Recent Logs (For Managers: Own + Pending/Rejected in Tenant) ---
-        $recentLogsQuery = CommissionEntry::with('user')
+        $recentLogsQuery = CommissionEntry::with('users')
             ->where('tenant_id', $tenantId)
             ->where('year', $year)
             ->where('month', $month);
 
         if (! $isManager) {
-            $recentLogsQuery->where('user_id', $user->id);
+            $recentLogsQuery->whereHas('users', fn($q) => $q->where('user_id', $user->id));
         } else {
+             // For manager: logs they are a PIC of, OR any pending log
              $recentLogsQuery->where(function($q) use ($user) {
-                 $q->where('user_id', $user->id)
+                 $q->whereHas('users', fn($sq) => $sq->where('user_id', $user->id))
                    ->orWhere('is_approved', false);
              });
         }
@@ -101,12 +133,14 @@ class CommissionController extends Controller
             'recent_logs'      => $logsData->map(fn($e) => [
                 'id'            => $e->id,
                 'type'          => $e->type,
-                'name'          => ($e->user_id !== $user->id) ? "{$e->user->name}: {$e->name}" : $e->name,
+                'name'          => $e->name,
+                'pic_names'     => $e->users->pluck('name')->toArray(),
                 'qty'           => $e->quantity,
                 'value'         => $e->package_value,
                 'is_approved'   => $e->is_approved,
                 'is_rejected'   => $e->is_rejected,
                 'rejection_reason' => $e->rejection_reason,
+                'remarks'       => $e->remarks,
                 'entry_date'    => $e->entry_date ? $e->entry_date->format('Y-m-d') : null,
                 'date'          => $e->created_at->toIso8601String(),
             ]),
@@ -117,26 +151,42 @@ class CommissionController extends Controller
                 ->where('role_id', '!=', 1) // Non-superadmins
                 ->get()
                 ->map(function($staff) use ($tenantId, $year, $month, $settings) {
-                    $staffEntries = CommissionEntry::where('user_id', $staff->id)
+                    $staffEntries = CommissionEntry::with('users')
+                        ->whereHas('users', fn($q) => $q->where('user_id', $staff->id))
                         ->where('year', $year)
                         ->where('month', $month)
                         ->where('is_approved', true)
                         ->get();
                     
-                    $dQty = $staffEntries->where('type', 'design')->sum('quantity');
-                    $aQty = $staffEntries->where('type', 'ads_management')->count();
-                    $sVal = $staffEntries->where('type', 'sales')->sum('package_value');
+                    $dQty = 0;
+                    $aQty = 0;
+                    $sVal = 0;
 
-                    $earned = $settings->designCommission($dQty) + 
-                             ($aQty * $settings->adsCommissionPerClient()) + 
-                             $settings->salesCommission($sVal);
+                    foreach ($staffEntries as $e) {
+                         $pivot = $e->users->firstWhere('id', $staff->id);
+                         $split = ($pivot && isset($pivot->pivot->split_percentage)) ? $pivot->pivot->split_percentage : 100;
+                         $pct = $split / 100;
+
+                         if (in_array($e->type, ['design', 'video'])) {
+                             $multiplier = ($e->type === 'video') ? 2 : 1;
+                             $dQty += ($e->quantity * $multiplier * $pct);
+                         } elseif ($e->type === 'ads_management') {
+                             $aQty += (1 * $pct);
+                         } elseif ($e->type === 'sales') {
+                             $sVal += ($e->package_value * $pct);
+                         }
+                    }
+
+                    $earned = $settings->designCommission((int) $dQty) + 
+                             ((int) $aQty * $settings->adsCommissionPerClient()) + 
+                             $settings->salesCommission((float) $sVal);
 
                     return [
                         'id' => $staff->id,
                         'name' => $staff->name,
                         'role' => $staff->role?->role ?? 'Staff',
                         'total_earned' => $earned,
-                        'pending_count' => CommissionEntry::where('user_id', $staff->id)
+                        'pending_count' => CommissionEntry::whereHas('users', fn($q) => $q->where('user_id', $staff->id))
                             ->where('year', $year)->where('month', $month)
                             ->where('is_approved', false)->where('is_rejected', false)->count(),
                     ];
@@ -155,7 +205,7 @@ class CommissionController extends Controller
         $user = Auth::user();
         
         $validated = $request->validate([
-            'type'          => 'required|in:design,ads_management,sales',
+            'type'          => 'required|in:design,video,ads_management,sales',
             'name'          => 'required|string|max:255',
             'quantity'      => 'nullable|integer|min:1',
             'package_value' => 'nullable|numeric|min:0',
@@ -163,6 +213,8 @@ class CommissionController extends Controller
             'year'          => 'required|integer',
             'entry_date'    => 'nullable|date',
             'remarks'       => 'nullable|string',
+            'pics'          => 'nullable|array',
+            'pics.*'        => 'integer|exists:users,id',
         ]);
 
         $entry = CommissionEntry::create([
@@ -178,11 +230,114 @@ class CommissionController extends Controller
             'remarks'       => $validated['remarks'],
         ]);
 
+        $picIds = $validated['pics'] ?? [];
+        if (!empty($picIds)) {
+            $split = 100 / count($picIds);
+            
+            // Video strictly follows 2x quantity logic handled elsewhere, but for sync, the split is what matters.
+            $syncData = [];
+            foreach ($picIds as $picId) {
+                $syncData[$picId] = [
+                    'tenant_id' => $user->tenant_id,
+                    'split_percentage' => $split,
+                ];
+            }
+            $entry->users()->sync($syncData);
+        } else {
+            // Legacy compatibility: automatically assign the creator as the 100% PIC
+            $entry->users()->sync([
+                $user->id => [
+                    'tenant_id' => $user->tenant_id,
+                    'split_percentage' => 100,
+                ]
+            ]);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Commission entry logged successfully.',
             'entry'   => $entry
         ], 201);
+    }
+
+    /**
+     * PUT /api/v1/commission/{id}
+     * Update an existing commission entry.
+     */
+    public function update(Request $request, $id)
+    {
+        $user = Auth::user();
+        $entry = CommissionEntry::where('tenant_id', $user->tenant_id)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        // Ensure user can only edit their own tickets unless they are a manager
+        if ($this->isStaffOnly($user) && $entry->user_id !== $user->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $validated = $request->validate([
+            'type'          => 'required|in:design,video,ads_management,sales',
+            'name'          => 'required|string|max:255',
+            'quantity'      => 'nullable|integer|min:1',
+            'package_value' => 'nullable|numeric|min:0',
+            'month'         => 'required|integer|between:1,12',
+            'year'          => 'required|integer',
+            'entry_date'    => 'nullable|date',
+            'remarks'       => 'nullable|string',
+            'pics'          => 'nullable|array',
+            'pics.*'        => 'integer|exists:users,id',
+        ]);
+
+        $entry->update([
+            'type'          => $validated['type'],
+            'name'          => $validated['name'],
+            'quantity'      => $validated['quantity'] ?? 1,
+            'package_value' => $validated['package_value'] ?? null,
+            'month'         => $validated['month'],
+            'year'          => $validated['year'],
+            'entry_date'    => $validated['entry_date'],
+            'remarks'       => $validated['remarks'],
+        ]);
+
+        $picIds = $validated['pics'] ?? [];
+        if (!empty($picIds)) {
+            $split = 100 / count($picIds);
+            
+            $syncData = [];
+            foreach ($picIds as $picId) {
+                $syncData[$picId] = [
+                    'tenant_id' => $user->tenant_id,
+                    'split_percentage' => $split,
+                ];
+            }
+            $entry->users()->sync($syncData);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Commission entry updated successfully.',
+            'entry'   => $entry
+        ]);
+    }
+
+    /**
+     * DELETE /api/v1/commission/{id}
+     */
+    public function destroy($id)
+    {
+        $user = Auth::user();
+        $entry = CommissionEntry::where('tenant_id', $user->tenant_id)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        if ($this->isStaffOnly($user) && $entry->user_id !== $user->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $entry->delete();
+
+        return response()->json(['success' => true, 'message' => 'Deleted successfully.']);
     }
 
     public function approve(Request $request, $id)
