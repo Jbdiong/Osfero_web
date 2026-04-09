@@ -41,15 +41,34 @@ class ArchivedTodolists extends ListRecords
                     ->label('Completed At')
                     ->dateTime()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('pics.name')
+                    ->label('PICs')
+                    ->badge()
+                    ->color('gray'),
             ])
             ->filters([
-                Tables\Filters\ToggleFilter::make('self_only')
+                Tables\Filters\Filter::make('self_only')
+                    ->toggle()
                     ->label('Show Self Only')
                     ->query(fn (Builder $query) => $query->whereHas('pics', fn ($q) => $q->where('user_id', auth()->id())))
-                    ->default(true)
+                    ->default(false)
                     ->visible(fn () => in_array(auth()->user()->role?->role, ['Superadmin', 'Tenant admin', 'Manager'])),
             ])
             ->actions([
+                Tables\Actions\Action::make('restore')
+                    ->label('Restore')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        $todoStatus = \App\Models\Lookup::whereHas('parent', fn ($q) => $q->where('name', 'Todolist Status'))
+                            ->where('name', 'To do')
+                            ->first();
+                        
+                        $record->update([
+                            'status_id' => $todoStatus?->id,
+                        ]);
+                    }),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
