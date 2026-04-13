@@ -166,13 +166,14 @@ class InventoryController extends Controller
             $q->with('stocks.location');
         }])->where('tenant_id', $tenantId);
 
-        if ($categoryId) {
-            $query->where('category_id', $categoryId);
+        if ($request->query('all')) {
+            // Return ALL items across every folder (used for global search)
+            $items = $query->get();
+        } elseif ($categoryId) {
+            $items = $query->where('category_id', $categoryId)->get();
         } else {
-            $query->whereNull('category_id');
+            $items = $query->whereNull('category_id')->get();
         }
-
-        $items = $query->get();
 
         return response()->json([
             'status' => 'success',
@@ -193,6 +194,8 @@ class InventoryController extends Controller
             'location_id' => 'nullable|exists:locations,id',
             'location_name' => 'nullable|string',
             'quantity' => 'nullable|numeric',
+            'supplier_price' => 'nullable|numeric',
+            'sales_price' => 'nullable|numeric',
         ]);
 
         try {
@@ -283,6 +286,8 @@ class InventoryController extends Controller
                     'item_id' => $item->id,
                     'sku' => $variantSku,
                     'barcode' => $variantIndex === 1 ? $request->barcode : null,
+                    'supplier_price' => $request->supplier_price ?? 0,
+                    'sales_price' => $request->sales_price ?? 0,
                     'min_stock_level' => $request->min_stock_level ?? 0,
                     'variant_specs' => empty($combo) ? null : $combo, // e.g. {"Color": "Red"}
                 ]);
@@ -377,6 +382,8 @@ class InventoryController extends Controller
             'category_id' => 'nullable|exists:categories,id',
             'category_name' => 'nullable|string',
             'variant_specs' => 'nullable|array',
+            'supplier_price' => 'nullable|numeric',
+            'sales_price' => 'nullable|numeric',
         ]);
 
         try {
@@ -428,6 +435,12 @@ class InventoryController extends Controller
                 if ($request->has('variant_specs')) {
                     $variant->variant_specs = $request->variant_specs;
                 }
+                if ($request->has('supplier_price')) {
+                    $variant->supplier_price = $request->supplier_price;
+                }
+                if ($request->has('sales_price')) {
+                    $variant->sales_price = $request->sales_price;
+                }
                 $variant->save();
             }
 
@@ -472,6 +485,100 @@ class InventoryController extends Controller
                     $q->with('stocks.location');
                 }])
             ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    // Update a single variant (SKU, barcode, prices, location, quantity adjustment)
+    public function updateVariant(Request $request, $variantId)
+    {
+        $request->validate([
+            'sku'            => 'nullable|string',
+            'barcode'        => 'nullable|string',
+            'supplier_price' => 'nullable|numeric',
+            'sales_price'    => 'nullable|numeric',
+            'location_id'    => 'nullable|exists:locations,id',
+            'location_name'  => 'nullable|string',
+            'quantity'       => 'nullable|numeric|min:0',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $variant = ItemVariant::with('item')->findOrFail($variantId);
+
+            // Tenant-safety check
+            if ($variant->item->tenant_id !== $request->user()->tenant_id) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
+            }
+
+            if ($request->filled('sku'))            $variant->sku            = $request->sku;
+            if ($request->has('barcode'))           $variant->barcode        = $request->barcode;
+            if ($request->has('supplier_price'))    $variant->supplier_price = $request->supplier_price;
+            if ($request->has('sales_price'))       $variant->sales_price    = $request->sales_price;
+            $variant->save();
+
+            // Handle location
+            $locationId = $request->location_id;
+            if (!$locationId && $request->filled('location_name')) {
+                $location = \App\Models\Location::firstOrCreate(
+                    ['name' => $request->location_name, 'tenant_id' => $request->user()->tenant_id],
+                    ['tenant_id' => $request->user()->tenant_id]
+                );
+                $locationId = $location->id;
+            }
+
+            // Update stock quantity if provided
+            if ($request->has('quantity') && $locationId) {
+                $newQty  = (float) $request->quantity;
+                $oldQty  = (float) DB::table('stocks')
+                    ->where('variant_id', $variantId)
+                    ->where('location_id', $locationId)
+                    ->value('quantity') ?? 0;
+
+                $diff = $newQty - $oldQty;
+
+                DB::table('stocks')->updateOrInsert(
+                    ['variant_id' => $variantId, 'location_id' => $locationId],
+                    ['quantity' => $newQty, 'updated_at' => now(), 'created_at' => now()]
+                );
+
+                if ($diff != 0) {
+                    DB::table('stock_movements')->insert([
+                        'variant_id'  => $variantId,
+                        'location_id' => $locationId,
+                        'user_id'     => $request->user()->id,
+                        'type'        => 'adjustment',
+                        'quantity'    => abs($diff),
+                        'notes'       => ($diff > 0 ? 'Stock increased by ' : 'Stock decreased by ') . abs($diff),
+                        'created_at'  => now(),
+                        'updated_at'  => now(),
+                    ]);
+                }
+            } elseif ($locationId) {
+                // Only moving location (no qty change): reassign existing stock row
+                $stocks = DB::table('stocks')->where('variant_id', $variantId)->get();
+                if ($stocks->count() === 1) {
+                    DB::table('stocks')
+                        ->where('variant_id', $variantId)
+                        ->update(['location_id' => $locationId, 'updated_at' => now()]);
+                } elseif ($stocks->isEmpty()) {
+                    DB::table('stocks')->insert([
+                        'variant_id'  => $variantId,
+                        'location_id' => $locationId,
+                        'quantity'    => 0,
+                        'created_at'  => now(),
+                        'updated_at'  => now(),
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            $variant->load('stocks.location');
+            return response()->json(['status' => 'success', 'data' => $variant]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);

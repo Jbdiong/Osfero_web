@@ -52,6 +52,7 @@ Route::prefix('v1')->group(function () {
         Route::put('/inventory/items/{id}/move', [\App\Http\Controllers\Api\InventoryController::class, 'moveItem']);
         Route::get('/inventory/locations', [\App\Http\Controllers\Api\InventoryController::class, 'getLocations']);
         Route::put('/inventory/variants/{variantId}/stock', [\App\Http\Controllers\Api\InventoryController::class, 'updateVariantStock']);
+        Route::put('/inventory/variants/{variantId}', [\App\Http\Controllers\Api\InventoryController::class, 'updateVariant']);
 
         // Lead dependencies & Lookups
         Route::get('/marketers', [\App\Http\Controllers\LookupController::class, 'getMarketers']);

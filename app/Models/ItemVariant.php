@@ -16,6 +16,8 @@ class ItemVariant extends Model
         'sku',
         'barcode',
         'uom_id',
+        'supplier_price',
+        'sales_price',
         'min_stock_level',
         'variant_specs',
     ];
@@ -23,6 +25,8 @@ class ItemVariant extends Model
     protected $casts = [
         'variant_specs' => 'array',
         'min_stock_level' => 'decimal:2',
+        'supplier_price' => 'decimal:2',
+        'sales_price' => 'decimal:2',
     ];
 
     public function item(): BelongsTo

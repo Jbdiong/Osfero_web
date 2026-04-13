@@ -44,4 +44,9 @@ class Item extends Model
     {
         return $this->hasMany(ItemVariant::class);
     }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(ItemAttachment::class);
+    }
 }
