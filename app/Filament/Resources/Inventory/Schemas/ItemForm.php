@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Inventory\Schemas;
 
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Location;
 use App\Models\UomCode;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
@@ -44,6 +45,7 @@ class ItemForm
                         Select::make('category_id')
                             ->label('Category')
                             ->options(fn () => Category::where('tenant_id', Auth::user()->tenant_id)->pluck('name', 'id'))
+                            ->default(request()->query('category_id'))
                             ->searchable()
                             ->preload()
                             ->createOptionForm([
@@ -89,6 +91,20 @@ class ItemForm
                                     ->label('Min Stock')
                                     ->numeric()
                                     ->default(0),
+                            ]),
+                            Grid::make(2)->schema([
+                                Select::make('initial_location_id')
+                                    ->label('Initial Location')
+                                    ->options(fn () => Location::where('tenant_id', Auth::user()->tenant_id)->pluck('name', 'id'))
+                                    ->searchable()
+                                    ->preload()
+                                    ->placeholder('Choose a location to add stock')
+                                    ->required(fn ($get) => (float)$get('initial_quantity') > 0),
+                                TextInput::make('initial_quantity')
+                                    ->label('Initial Stock')
+                                    ->numeric()
+                                    ->default(0)
+                                    ->helperText('Type a number to set the starting stock level.'),
                             ]),
                             KeyValue::make('variant_specs')
                                 ->label('Variant Detail (e.g. Color: Blue, Size: XL)')

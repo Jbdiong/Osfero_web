@@ -3,19 +3,29 @@
 namespace App\Filament\Resources\Inventory;
 
 use App\Models\Category;
+use App\Filament\Resources\Inventory\Category\RelationManagers\SubfoldersRelationManager;
+use App\Filament\Resources\Inventory\Category\RelationManagers\ItemsRelationManager;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\ViewAction;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Actions\BulkActionGroup;
+use Filament\Tables\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
 class CategoryResource extends Resource
 {
     protected static ?string $model = Category::class;
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $slug = 'folders';
+    protected static ?string $navigationLabel = 'Folders';
+    protected static ?string $modelLabel = 'Folder';
+    protected static ?string $pluralModelLabel = 'Folders';
+    protected static ?string $navigationIcon = 'heroicon-o-folder';
     protected static ?string $navigationGroup = 'Inventory';
     protected static ?int $navigationSort = 3;
 
@@ -39,18 +49,44 @@ class CategoryResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('name')->searchable()->sortable(),
-                TextColumn::make('parent.name')->label('Parent'),
+                TextColumn::make('name')
+                    ->label('Folder Name')
+                    ->icon('heroicon-o-folder')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('children_count')
+                    ->counts('children')
+                    ->label('Sub-folders'),
+                TextColumn::make('items_count')
+                    ->counts('items')
+                    ->label('Items'),
                 TextColumn::make('created_at')->dateTime()->sortable(),
             ])
-            ->actions([\Filament\Tables\Actions\EditAction::make()])
-            ->bulkActions([\Filament\Tables\Actions\BulkActionGroup::make([\Filament\Tables\Actions\DeleteBulkAction::make()])]);
+            ->actions([
+                ViewAction::make()->label('Open Folder'),
+                EditAction::make(),
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
+            ])
+            ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('parent_id'));
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            SubfoldersRelationManager::class,
+            ItemsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array
     {
         return [
             'index' => \App\Filament\Resources\Inventory\Category\Pages\ListCategory::route('/'),
+            'view' => \App\Filament\Resources\Inventory\Category\Pages\ViewCategory::route('/{record}'),
         ];
     }
 }

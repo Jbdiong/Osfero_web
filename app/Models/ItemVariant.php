@@ -20,7 +20,22 @@ class ItemVariant extends Model
         'sales_price',
         'min_stock_level',
         'variant_specs',
+        'initial_location_id', // Virtual
+        'initial_quantity',     // Virtual
     ];
+
+    protected static function booted()
+    {
+        static::created(function ($variant) {
+            if ($variant->initial_location_id && $variant->initial_quantity > 0) {
+                \App\Models\Stock::create([
+                    'variant_id' => $variant->id,
+                    'location_id' => $variant->initial_location_id,
+                    'quantity' => $variant->initial_quantity,
+                ]);
+            }
+        });
+    }
 
     protected $casts = [
         'variant_specs' => 'array',

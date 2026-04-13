@@ -185,17 +185,18 @@ class InventoryController extends Controller
     public function storeItem(Request $request)
     {
         $request->validate([
-            'name' => 'required|string',
-            'category_id' => 'nullable|exists:categories,id',
-            'category_name' => 'nullable|string',
-            'base_sku' => 'nullable|string',
-            'barcode' => 'nullable|string|unique:item_variants,barcode',
-            'variant_specs' => 'nullable|array',
-            'location_id' => 'nullable|exists:locations,id',
-            'location_name' => 'nullable|string',
-            'quantity' => 'nullable|numeric',
+            'name'           => 'required|string',
+            'category_id'    => 'nullable|exists:categories,id',
+            'category_name'  => 'nullable|string',
+            'base_sku'       => 'nullable|string',
+            'barcode'        => 'nullable|string|unique:item_variants,barcode',
+            'variant_specs'  => 'nullable|array',
+            'location_id'    => 'nullable|exists:locations,id',
+            'location_name'  => 'nullable|string',
+            'quantity'       => 'nullable|numeric',
             'supplier_price' => 'nullable|numeric',
-            'sales_price' => 'nullable|numeric',
+            'sales_price'    => 'nullable|numeric',
+            'min_stock_level'=> 'nullable|numeric|min:0',
         ]);
 
         try {
@@ -283,13 +284,13 @@ class InventoryController extends Controller
                     : ('SKU-' . strtoupper(str_pad(dechex(mt_rand()), 8, '0', STR_PAD_LEFT)));
 
                 $variant = ItemVariant::create([
-                    'item_id' => $item->id,
-                    'sku' => $variantSku,
-                    'barcode' => $variantIndex === 1 ? $request->barcode : null,
-                    'supplier_price' => $request->supplier_price ?? 0,
-                    'sales_price' => $request->sales_price ?? 0,
+                    'item_id'         => $item->id,
+                    'sku'             => $variantSku,
+                    'barcode'         => $variantIndex === 1 ? $request->barcode : null,
+                    'supplier_price'  => $request->supplier_price ?? 0,
+                    'sales_price'     => $request->sales_price ?? 0,
                     'min_stock_level' => $request->min_stock_level ?? 0,
-                    'variant_specs' => empty($combo) ? null : $combo, // e.g. {"Color": "Red"}
+                    'variant_specs'   => empty($combo) ? null : $combo,
                 ]);
 
                 if ($variantIndex === 1) $firstVariant = $variant;
@@ -377,13 +378,14 @@ class InventoryController extends Controller
     public function updateItem(Request $request, $id)
     {
         $request->validate([
-            'name' => 'required|string',
-            'base_sku' => 'nullable|string',
-            'category_id' => 'nullable|exists:categories,id',
-            'category_name' => 'nullable|string',
-            'variant_specs' => 'nullable|array',
+            'name'           => 'required|string',
+            'base_sku'       => 'nullable|string',
+            'category_id'    => 'nullable|exists:categories,id',
+            'category_name'  => 'nullable|string',
+            'variant_specs'  => 'nullable|array',
             'supplier_price' => 'nullable|numeric',
-            'sales_price' => 'nullable|numeric',
+            'sales_price'    => 'nullable|numeric',
+            'min_stock_level'=> 'nullable|numeric|min:0',
         ]);
 
         try {
@@ -429,18 +431,11 @@ class InventoryController extends Controller
             // Update first variant for simplicity
             $variant = $item->variants()->first();
             if ($variant) {
-                if ($request->has('barcode')) {
-                    $variant->barcode = $request->barcode;
-                }
-                if ($request->has('variant_specs')) {
-                    $variant->variant_specs = $request->variant_specs;
-                }
-                if ($request->has('supplier_price')) {
-                    $variant->supplier_price = $request->supplier_price;
-                }
-                if ($request->has('sales_price')) {
-                    $variant->sales_price = $request->sales_price;
-                }
+                if ($request->has('barcode'))        $variant->barcode        = $request->barcode;
+                if ($request->has('variant_specs'))  $variant->variant_specs  = $request->variant_specs;
+                if ($request->has('supplier_price')) $variant->supplier_price = $request->supplier_price;
+                if ($request->has('sales_price'))    $variant->sales_price    = $request->sales_price;
+                if ($request->has('min_stock_level'))$variant->min_stock_level= $request->min_stock_level;
                 $variant->save();
             }
 
@@ -499,6 +494,7 @@ class InventoryController extends Controller
             'barcode'        => 'nullable|string',
             'supplier_price' => 'nullable|numeric',
             'sales_price'    => 'nullable|numeric',
+            'min_stock_level'=> 'nullable|numeric|min:0',
             'location_id'    => 'nullable|exists:locations,id',
             'location_name'  => 'nullable|string',
             'quantity'       => 'nullable|numeric|min:0',
@@ -514,10 +510,11 @@ class InventoryController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
             }
 
-            if ($request->filled('sku'))            $variant->sku            = $request->sku;
-            if ($request->has('barcode'))           $variant->barcode        = $request->barcode;
-            if ($request->has('supplier_price'))    $variant->supplier_price = $request->supplier_price;
-            if ($request->has('sales_price'))       $variant->sales_price    = $request->sales_price;
+            if ($request->filled('sku'))             $variant->sku             = $request->sku;
+            if ($request->has('barcode'))            $variant->barcode         = $request->barcode;
+            if ($request->has('supplier_price'))     $variant->supplier_price  = $request->supplier_price;
+            if ($request->has('sales_price'))        $variant->sales_price     = $request->sales_price;
+            if ($request->has('min_stock_level'))    $variant->min_stock_level = $request->min_stock_level;
             $variant->save();
 
             // Handle location
@@ -532,8 +529,15 @@ class InventoryController extends Controller
 
             // Update stock quantity if provided
             if ($request->has('quantity') && $locationId) {
-                $newQty  = (float) $request->quantity;
-                $oldQty  = (float) DB::table('stocks')
+                $newQty = (float) $request->quantity;
+
+                // Consolidate: remove stock rows at OTHER locations (location change)
+                DB::table('stocks')
+                    ->where('variant_id', $variantId)
+                    ->where('location_id', '!=', $locationId)
+                    ->delete();
+
+                $oldQty = (float) DB::table('stocks')
                     ->where('variant_id', $variantId)
                     ->where('location_id', $locationId)
                     ->value('quantity') ?? 0;
@@ -558,17 +562,26 @@ class InventoryController extends Controller
                     ]);
                 }
             } elseif ($locationId) {
-                // Only moving location (no qty change): reassign existing stock row
+                // Location-only change (no explicit qty): consolidate all rows → new location
                 $stocks = DB::table('stocks')->where('variant_id', $variantId)->get();
-                if ($stocks->count() === 1) {
-                    DB::table('stocks')
-                        ->where('variant_id', $variantId)
-                        ->update(['location_id' => $locationId, 'updated_at' => now()]);
-                } elseif ($stocks->isEmpty()) {
+
+                if ($stocks->isEmpty()) {
+                    // No stock yet → create empty row at new location
                     DB::table('stocks')->insert([
                         'variant_id'  => $variantId,
                         'location_id' => $locationId,
                         'quantity'    => 0,
+                        'created_at'  => now(),
+                        'updated_at'  => now(),
+                    ]);
+                } else {
+                    // Sum all existing qty, delete old rows, insert at new location
+                    $totalQty = $stocks->sum('quantity');
+                    DB::table('stocks')->where('variant_id', $variantId)->delete();
+                    DB::table('stocks')->insert([
+                        'variant_id'  => $variantId,
+                        'location_id' => $locationId,
+                        'quantity'    => $totalQty,
                         'created_at'  => now(),
                         'updated_at'  => now(),
                     ]);
