@@ -35,7 +35,7 @@ class TodolistForm
                                     ->schema([
                                         DatePicker::make('start_date')
                                             ->native(false)
-                                            ->default(now())
+                                            ->default(today())
                                             ->required(),
                                         DatePicker::make('end_date')
                                             ->native(false)
@@ -90,6 +90,7 @@ class TodolistForm
                                         \Filament\Forms\Components\CheckboxList::make('pics')
                                             ->label('Select PICs')
                                             ->relationship('pics', 'name', fn ($query) => $query->where('users.tenant_id', auth()->user()->tenant_id))
+                                            ->required()
                                             ->searchable()
                                             ->bulkToggleable()
                                             ->columns(1)
