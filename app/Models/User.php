@@ -40,6 +40,10 @@ class User extends Authenticatable implements FilamentUser, HasTenants, HasName
         'verification_code',
     ];
 
+    protected $appends = [
+        'tenant_id',
+    ];
+
     /**
      * The attributes that should be hidden for serialization.
      *

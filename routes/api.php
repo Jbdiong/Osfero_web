@@ -23,6 +23,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/todolists', [TodolistController::class, 'store']);
         Route::put('/todolists/{id}', [TodolistController::class, 'update']);
         Route::delete('/todolists/{id}', [TodolistController::class, 'destroy']);
+        
+        Route::post('/auth/switch-tenant', [AuthController::class, 'switchTenant']);
 
         Route::get('/events/staff', [TodoController::class, 'getStaff']);
 

@@ -40,7 +40,7 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Login successful',
             'token' => $token,
-            'user' => $user
+            'user' => $user->load('tenants')
         ]);
     }
 
@@ -134,7 +134,36 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Registration successful',
             'token' => $token,
-            'user' => $user
+            'user' => $user->load('tenants')
         ], 201);
+    }
+
+    public function switchTenant(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'tenant_id' => 'required|exists:tenants,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = $request->user();
+        $tenantId = $request->tenant_id;
+
+        // Verify the user belongs to this tenant
+        if (!$user->tenants->contains($tenantId)) {
+            return response()->json([
+                'message' => 'Unauthorized access to this tenant.'
+            ], 403);
+        }
+
+        $user->last_active_tenant_id = $tenantId;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Tenant switched successfully',
+            'user' => $user->load('tenants')
+        ]);
     }
 }
