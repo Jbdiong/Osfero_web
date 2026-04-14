@@ -230,7 +230,7 @@ class LookupSeeder extends Seeder
             'tenant_id' => null, // Global
         ]);
 
-        $renewalStatuses = ['Pending Renewal', 'Followed Up'];
+        $renewalStatuses = ['Pending Renewal', 'Followed Up', 'On Going'];
         foreach ($renewalStatuses as $status) {
             $lookups[] = [
                 'name' => $status,

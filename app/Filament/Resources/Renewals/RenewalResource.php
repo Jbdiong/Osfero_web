@@ -12,6 +12,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Forms\Components\DatePicker;
 
 class RenewalResource extends Resource
 {
@@ -53,6 +54,8 @@ class RenewalResource extends Resource
                     ->maxLength(255)
                     ->default(null),
                 Forms\Components\DatePicker::make('start_date')
+                    ->displayFormat('d/m/Y')
+                    ->native(false)
                     ->required()
                     ->live(),
                 Forms\Components\Select::make('duration')
@@ -83,11 +86,13 @@ class RenewalResource extends Resource
                             $startDate = \Carbon\Carbon::parse($startDate);
                         }
 
-                        $set('Renew_Date', $startDate->addMonths($state)->format('Y-m-d'));
+                        $set('Renew_Date', $startDate->addMonths($state)->subDay()->format('Y-m-d'));
                     }),
                 Forms\Components\DatePicker::make('Renew_Date')
                     ->required()
-                    ->label('Renew Date')
+                    ->displayFormat('d/m/Y')
+                    ->native(false)
+                    ->label('Expired Date')
                     ->after('start_date'),
                 Forms\Components\Select::make('status_id')
                     ->relationship('status', 'name', fn ($query) => $query->whereHas('parent', fn ($q) => $q->where('name', 'Renewal Status')))
@@ -121,7 +126,7 @@ class RenewalResource extends Resource
                 Tables\Columns\TextColumn::make('Renew_Date')
                     ->date('d M Y')
                     ->sortable()
-                    ->label('Renew Date')
+                    ->label('Expired Date')
                     ->color(fn (Renewal $record) => $record->Renew_Date < now()->startOfDay() ? 'danger' : null),
                 Tables\Columns\TextColumn::make('status.name')
                     ->badge()
