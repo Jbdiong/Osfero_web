@@ -89,7 +89,7 @@ class TodolistForm
                                     ->schema([
                                         \Filament\Forms\Components\CheckboxList::make('pics')
                                             ->label('Select PICs')
-                                            ->relationship('pics', 'name', fn ($query) => $query->where('users.tenant_id', auth()->user()->tenant_id))
+                                            ->relationship('pics', 'name', fn ($query) => $query->whereHas('tenants', fn ($q) => $q->where('tenants.id', auth()->user()->tenant_id)))
                                             ->required()
                                             ->searchable()
                                             ->bulkToggleable()

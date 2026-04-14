@@ -21,10 +21,16 @@ class RenewalResource extends Resource
 
     protected static ?string $slug = 'renewals';
 
+    protected static ?string $recordTitleAttribute = 'label';
+
     public static function getNavigationBadge(): ?string
     {
+        $tenantId = \Filament\Facades\Filament::getTenant()?->id;
+        
+        if (! $tenantId) return null;
+
         return static::getModel()::whereDate('Renew_Date', '<=', now())
-            ->where('tenant_id', auth()->user()->tenant_id)
+            ->where('tenant_id', $tenantId)
             ->where(function ($query) {
                 $query->whereNull('status_id')
                     ->orWhereHas('status', function ($q) {

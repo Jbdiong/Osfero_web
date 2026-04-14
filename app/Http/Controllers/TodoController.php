@@ -371,7 +371,7 @@ class TodoController extends Controller
             ], 400);
         }
 
-        $staff = User::where('tenant_id', $tenantId)
+        $staff = User::whereHas('tenants', fn ($q) => $q->where('tenants.id', $tenantId))
             ->select('id', 'name', 'email')
             ->orderBy('name')
             ->get();

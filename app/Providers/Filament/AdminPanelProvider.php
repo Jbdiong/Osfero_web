@@ -44,10 +44,20 @@ class AdminPanelProvider extends PanelProvider
             )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
+            ->tenant(\App\Models\Tenant::class, slugAttribute: 'slug')
+            ->tenantMenuItems([
+                \Filament\Navigation\MenuItem::make()
+                    ->label('Join Another Space')
+                    ->icon('heroicon-o-plus-circle')
+                    ->url(fn (): string => \App\Filament\Pages\JoinWorkspace::getUrl()),
+            ])
             ->maxContentWidth(\Filament\Support\Enums\MaxWidth::Full)
             ->pages([
                 Dashboard::class,
                 \App\Filament\Resources\Trackings\Pages\Tracking::class,
+            ])
+            ->tenantMiddleware([
+                \App\Http\Middleware\UpdateLastActiveTenant::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([

@@ -172,7 +172,7 @@ class LookupController extends Controller
         $cacheKey = "lookups.marketers.tenant.{$tenantId}";
         
         $marketers = Cache::remember($cacheKey, 3600, function () use ($tenantId) {
-            return User::where('tenant_id', $tenantId)
+            return User::whereHas('tenants', fn ($q) => $q->where('tenants.id', $tenantId))
                 ->orderBy('name')
                 ->get(['id', 'name', 'email'])
                 ->toArray();

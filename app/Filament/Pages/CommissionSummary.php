@@ -96,7 +96,7 @@ class CommissionSummary extends Page implements HasForms
         $fUser  = $state['filterUser'] ?? null;
 
         // Get all staff in this tenant (show all, even if no entries)
-        $staffQuery = User::where('tenant_id', $tenantId);
+        $staffQuery = User::whereHas('tenants', fn ($q) => $q->where('tenants.id', $tenantId));
         if ($fUser) {
             $staffQuery->where('id', $fUser);
         }
@@ -224,7 +224,7 @@ class CommissionSummary extends Page implements HasForms
     public function getUserOptions(): array
     {
         $tenantId = Auth::user()->tenant_id;
-        return User::where('tenant_id', $tenantId)->pluck('name', 'id')->toArray();
+        return User::whereHas('tenants', fn ($q) => $q->where('tenants.id', $tenantId))->pluck('name', 'id')->toArray();
     }
 
     public function getSelectedMonthLabel(): string

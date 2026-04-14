@@ -25,6 +25,8 @@ class CommissionResource extends Resource
     protected static ?string $navigationGroup = 'Commission';
 
     protected static ?int $navigationSort = 1;
+    
+    protected static ?string $recordTitleAttribute = 'name';
 
     public static function getEloquentQuery(): Builder
     {

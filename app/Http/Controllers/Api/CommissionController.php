@@ -147,8 +147,10 @@ class CommissionController extends Controller
         ];
 
         if ($isManager) {
-             $response['staff_summary'] = User::where('tenant_id', $tenantId)
-                ->where('role_id', '!=', 1) // Non-superadmins
+             $response['staff_summary'] = User::whereHas('tenants', function($q) use ($tenantId) {
+                    $q->where('tenants.id', $tenantId)
+                      ->where('role_id', '!=', 1); // Non-superadmins in this tenant
+                })
                 ->get()
                 ->map(function($staff) use ($tenantId, $year, $month, $settings) {
                     $staffEntries = CommissionEntry::with('users')

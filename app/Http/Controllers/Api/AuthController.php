@@ -117,8 +117,13 @@ class AuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'tenant_id' => $tenant->id,
+            'last_active_tenant_id' => $tenant->id,
+        ]);
+
+        // Attach to pivot
+        $user->tenants()->attach($tenant->id, [
             'role_id' => $staffRole ? $staffRole->id : 4,
+            'display_name' => $user->name,
         ]);
 
         // Clean up OTP

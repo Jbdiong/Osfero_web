@@ -18,8 +18,8 @@ class TrackingController extends Controller
         $user = Auth::user();
         $tenantId = $user->tenant_id;
 
-        // Get all users in the tenant
-        $users = User::where('tenant_id', $tenantId)
+        // Get all users in the tenant via pivot table
+        $users = User::whereHas('tenants', fn ($q) => $q->where('tenants.id', $tenantId))
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
 
@@ -30,7 +30,7 @@ class TrackingController extends Controller
                 'leadPICs' => function($query) use ($tenantId) {
                     $query->where('tenant_id', $tenantId)
                         ->with(['user' => function($userQuery) use ($tenantId) {
-                            $userQuery->where('tenant_id', $tenantId);
+                            $userQuery->whereHas('tenants', fn ($q) => $q->where('tenants.id', $tenantId));
                         }]);
                 },
                 'status'
@@ -59,7 +59,7 @@ class TrackingController extends Controller
                 'todolistPICs' => function($query) use ($tenantId) {
                     $query->where('tenant_id', $tenantId)
                         ->with(['user' => function($userQuery) use ($tenantId) {
-                            $userQuery->where('tenant_id', $tenantId);
+                            $userQuery->whereHas('tenants', fn ($q) => $q->where('tenants.id', $tenantId));
                         }]);
                 },
                 'status',

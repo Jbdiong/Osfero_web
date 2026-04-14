@@ -140,8 +140,13 @@ class Register extends BaseRegister
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
-            'tenant_id' => $tenant->id,
-            'role_id' => $staffRole ? $staffRole->id : 4, // Fallback to 4 or handle error
+            'last_active_tenant_id' => $tenant->id,
+        ]);
+        
+        // Attach to the tenant via the pivot table
+        $user->tenants()->attach($tenant->id, [
+            'role_id' => $staffRole ? $staffRole->id : 4,
+            'display_name' => $data['name'],
         ]);
         
         // Clean up session

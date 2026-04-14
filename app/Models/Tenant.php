@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 use App\Models\CommissionEntry;
 use App\Models\CommissionSetting;
 
@@ -15,6 +16,7 @@ class Tenant extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'description',
         'code',
         'code_expiring',
@@ -23,6 +25,28 @@ class Tenant extends Model
     protected $casts = [
         'code_expiring' => 'datetime',
     ];
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (self $tenant) {
+            if (empty($tenant->slug)) {
+                $tenant->slug = Str::slug($tenant->name);
+            }
+        });
+
+        static::updating(function (self $tenant) {
+            if ($tenant->isDirty('name') && empty($tenant->slug)) {
+                $tenant->slug = Str::slug($tenant->name);
+            }
+        });
+    }
 
     public function generateInvitationCode()
     {
@@ -40,9 +64,11 @@ class Tenant extends Model
             ->first();
     }
 
-    public function users(): HasMany
+    public function users(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
-        return $this->hasMany(User::class);
+        return $this->belongsToMany(User::class)
+            ->withPivot(['role_id', 'display_name'])
+            ->withTimestamps();
     }
 
     public function leads(): HasMany

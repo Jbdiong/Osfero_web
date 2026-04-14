@@ -19,6 +19,9 @@ class TenantResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    // Prevent Filament from trying to scope Tenants by themselves
+    protected static bool $isScopedToTenant = false;
+
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();

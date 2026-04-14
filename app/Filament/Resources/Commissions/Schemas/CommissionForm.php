@@ -74,7 +74,7 @@ class CommissionForm
                         ->label(fn (Get $get) => $get('type') === 'video' ? 'Primary PIC' : 'Staff Member (PIC)')
                         ->options(function () {
                             $tenantId = Auth::user()->tenant_id;
-                            return User::where('tenant_id', $tenantId)->pluck('name', 'id');
+                            return User::whereHas('tenants', fn ($q) => $q->where('tenants.id', $tenantId))->pluck('name', 'id');
                         })
                         ->default(fn () => Auth::id())
                         ->afterStateHydrated(function (Forms\Components\Select $component, ?Model $record) {
@@ -114,7 +114,7 @@ class CommissionForm
                         ->label('Secondary PIC')
                         ->options(function () {
                             $tenantId = Auth::user()->tenant_id;
-                            return User::where('tenant_id', $tenantId)->pluck('name', 'id');
+                            return User::whereHas('tenants', fn ($q) => $q->where('tenants.id', $tenantId))->pluck('name', 'id');
                         })
                         ->afterStateHydrated(function (Forms\Components\Select $component, ?Model $record) {
                             if (! $record) return;
@@ -141,7 +141,7 @@ class CommissionForm
                         ->multiple()
                         ->relationship('users', 'name', function ($query) {
                             $tenantId = Auth::user()->tenant_id;
-                            return $query->where('users.tenant_id', $tenantId);
+                            return $query->whereHas('tenants', fn ($q) => $q->where('tenants.id', $tenantId));
                         })
                         ->preload()
                         ->searchable()

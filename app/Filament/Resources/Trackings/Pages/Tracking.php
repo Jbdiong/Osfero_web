@@ -31,10 +31,10 @@ class Tracking extends Page
         $user = Auth::user();
         $tenantId = $user->tenant_id;
 
-        // Get all users in the tenant
-        $users = User::where('tenant_id', $tenantId)
+        // Get all users in the tenant via the pivot table
+        $users = User::whereHas('tenants', fn ($q) => $q->where('tenants.id', $tenantId))
             ->orderBy('name')
-            ->get(['id', 'name', 'email', 'tenant_id']);
+            ->get(['id', 'name', 'email']);
 
         // Initialize user columns
         $itemsByUser = [];

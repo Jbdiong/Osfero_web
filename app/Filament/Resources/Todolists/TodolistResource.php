@@ -43,8 +43,19 @@ class TodolistResource extends Resource
     
     public static function getNavigationBadge(): ?string
     {
-        return static::getEloquentQuery()
-            ->whereDate('end_date', '<=', now())
+        $user = auth()->user();
+        $isManager = in_array($user?->role?->role, ['Superadmin', 'Tenant admin', 'Manager']);
+
+        $query = static::getModel()::query()
+            ->where('tenant_id', $user?->tenant_id);
+
+        if (!$isManager) {
+            $query->whereHas('pics', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        }
+
+        return $query->whereDate('end_date', '<=', now())
             ->whereHas('status', function ($query) {
                 $query->where('name', '!=', 'Completed');
             })
