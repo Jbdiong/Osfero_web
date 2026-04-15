@@ -42,6 +42,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants, HasName
 
     protected $appends = [
         'tenant_id',
+        'role',
     ];
 
     /**
