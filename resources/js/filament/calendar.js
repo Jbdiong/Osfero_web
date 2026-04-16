@@ -3,6 +3,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import listPlugin from '@fullcalendar/list';
 import interactionPlugin from '@fullcalendar/interaction';
+import googleCalendarPlugin from '@fullcalendar/google-calendar';
 import axios from 'axios';
 
 // Configure Axios
@@ -56,6 +57,27 @@ const filamentCalendarFactory = ({
     isLoadingAudits: false,
     showAuditView: false,
     updatingRenewalIds: [],
+
+    // --- Google Style Event Modal State ---
+    showEventModal: false,
+    eventModalPosition: { top: 0, left: 0 },
+    eventForm: {
+        title: '',
+        type: 'event', // event or task
+        start: null,
+        end: null,
+        allDay: true
+    },
+
+    // --- Hover Event Tooltip ---
+    showEventHoverCard: false,
+    hoverCardPosition: { top: 0, left: 0 },
+    hoverCardData: {
+        title: '',
+        calendarName: '',
+        dateStr: '',
+        creator: ''
+    },
 
     // =================================================================================================
     // COMPUTED PROPERTIES (Mapped as getters/functions for Alpine)
@@ -157,15 +179,26 @@ const filamentCalendarFactory = ({
                 title: event.title,
                 start: event.start, // Pass strictly as received (ISO string)
                 end: event.end,     // Pass strictly as received (ISO string)
-                backgroundColor: colorMap[event.color] || colorMap['blue'], // Default to blue if undefined
-                borderColor: colorMap[event.color] || colorMap['blue'],
+                backgroundColor: '#ffd7b5', // Forced to requested orange
+                borderColor: '#ff6700', // Forced to requested border
+                textColor: '#000000',
                 extendedProps: { ...event }
             };
         });
 
         if (this.calendar) {
-            this.calendar.removeAllEvents();
-            this.calendar.addEventSource(this.fullCalendarEvents);
+            const localSource = this.calendar.getEventSourceById('local-events');
+            if (localSource) {
+                localSource.remove();
+            }
+            this.calendar.addEventSource({
+                id: 'local-events',
+                events: this.fullCalendarEvents,
+                display: 'block',
+                backgroundColor: '#ffd7b5',
+                borderColor: '#ff6700',
+                textColor: '#000000'
+            });
         }
     },
 
@@ -174,15 +207,95 @@ const filamentCalendarFactory = ({
         if (!calendarEl) return;
 
         this.calendar = new Calendar(calendarEl, {
-            plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
+            plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, googleCalendarPlugin],
+            googleCalendarApiKey: 'AIzaSyC7-5vxTrZT5gXzVLWUIvY9sA1TWu5QQLg',
             initialView: 'dayGridMonth',
             initialDate: this.selectedDate,
             headerToolbar: false,
             height: '100%',
-            events: this.fullCalendarEvents,
+            nowIndicator: true,
+            selectable: true,
+            selectMirror: true,
+            select: (info) => {
+                let start = info.start;
+                let end = info.end;
+                let allDay = info.allDay;
+
+                if (!allDay && (end.getTime() - start.getTime() === 30 * 60000)) {
+                    end = new Date(start.getTime() + 60 * 60000);
+                }
+
+                this.openEventModal(start, end, allDay, info.jsEvent);
+            },
+            eventClick: (info) => {
+                info.jsEvent.preventDefault(); // Prevents navigating to the Google URL
+            },
+            eventMouseEnter: (info) => {
+                const ev = info.event;
+                const isGoogleHoliday = ev.source && ev.source.id === 'google-holidays';
+
+                this.hoverCardData = {
+                    title: ev.title,
+                    calendarName: isGoogleHoliday ? 'Holidays in Malaysia' : (ev.extendedProps.calendarName || 'Primary Calendar'),
+                    dateStr: ev.start.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
+                    creator: isGoogleHoliday ? 'Holidays in Malaysia' : (ev.extendedProps.creator || 'User Setup')
+                };
+
+                const rect = info.el.getBoundingClientRect();
+                const cardWidth = 320;
+                const cardHeight = 160;
+
+                let top = rect.top;
+                let left = rect.right + 10;
+
+                if (left + cardWidth > window.innerWidth) {
+                    left = rect.left - cardWidth - 10;
+                }
+
+                if (top + cardHeight > window.innerHeight) {
+                    top = window.innerHeight - cardHeight - 10;
+                }
+
+                if (top < 10) top = 10;
+                if (left < 10) left = 10;
+
+                this.hoverCardPosition = { top, left };
+                this.showEventHoverCard = true;
+            },
+            eventMouseLeave: (info) => {
+                this.showEventHoverCard = false;
+            },
+            eventSources: [
+                {
+                    id: 'local-events',
+                    events: this.fullCalendarEvents,
+                    display: 'block',
+                    backgroundColor: '#ffd7b5',
+                    borderColor: '#ff6700',
+                    textColor: '#000000'
+                },
+                {
+                    id: 'google-holidays',
+                    googleCalendarId: 'en.malaysia#holiday@group.v.calendar.google.com',
+                    color: '#C6FFCA',
+                    textColor: '#000000',
+                    borderColor: '#008002'
+                }
+            ],
             eventContent: (arg) => {
+                const isGoogleHoliday = arg.event.source && arg.event.source.id === 'google-holidays';
+
+                if (isGoogleHoliday) {
+                    return {
+                        html: `<div class=" flex items-center gap-1 overflow-hidden">
+                            <svg class="w-2 h-2 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                            <div class="text-xs font-semibold text-gray-700 capitalize truncate flex-1 min-w-0" title="${arg.event.title}">${arg.event.title}</div>
+                        </div>`
+                    };
+                }
+
                 return {
-                    html: `<div class="p-1"><div class="text-xs font-semibold">${arg.event.title}</div></div>`
+                    html: `<div class=" overflow-hidden"><div class="text-xs font-semibold truncate" title="${arg.event.title}">${arg.event.title}</div></div>`
                 };
             }
         });
@@ -227,6 +340,97 @@ const filamentCalendarFactory = ({
             // Sync internal state
             this.selectedDate = this.calendar.getDate();
             this.currentDate = new Date(this.selectedDate);
+        }
+    },
+
+
+    // =================================================================================================
+    // NEW EVENT/TASK MODAL LOGIC (Google Style)
+    // =================================================================================================
+
+    openEventModal(start, end, allDay, jsEvent = null) {
+        if (!start) {
+            start = new Date();
+            // Default 1 hour from now without seconds
+            start.setMinutes(0, 0, 0);
+            end = new Date(start.getTime() + 60 * 60000);
+            allDay = false;
+        }
+
+        this.eventForm = {
+            title: '',
+            type: 'event',
+            start: start,
+            end: end,
+            allDay: allDay
+        };
+
+        if (jsEvent) {
+            const modalWidth = 450;
+            const modalHeight = 450; // estimate
+            let top = jsEvent.clientY;
+            let left = jsEvent.clientX + 20;
+
+            if (left + modalWidth > window.innerWidth) {
+                left = jsEvent.clientX - modalWidth - 20;
+            }
+
+            if (top + modalHeight > window.innerHeight) {
+                top = window.innerHeight - modalHeight - 20;
+            }
+            if (top < 0) top = 20;
+            if (left < 0) left = 20;
+
+            this.eventModalPosition = { top, left };
+        } else {
+            this.eventModalPosition = {
+                top: Math.max((window.innerHeight - 450) / 2, 20),
+                left: Math.max((window.innerWidth - 450) / 2, 20)
+            };
+        }
+
+        this.showEventModal = true;
+    },
+
+    closeEventModal() {
+        this.showEventModal = false;
+        if (this.calendar) {
+            this.calendar.unselect();
+        }
+    },
+
+    saveEvent() {
+        // Here you would connect to Laravel/Livewire to save the draft event/task
+        this.closeEventModal();
+    },
+
+    formatEventDateTimeDisplay() {
+        if (!this.eventForm.start) return '';
+
+        const start = this.eventForm.start;
+        const end = this.eventForm.end;
+        const allDay = this.eventForm.allDay;
+
+        const formatDate = (d) => d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        const formatTime = (d) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+
+        if (allDay) {
+            // FullCalendar passes start/end days. End is exclusive.
+            let endDisplayObj = new Date(end);
+            endDisplayObj.setDate(endDisplayObj.getDate() - 1);
+
+            if (start.getTime() === endDisplayObj.getTime() || endDisplayObj < start) {
+                return formatDate(start);
+            } else {
+                return `${formatDate(start)} – ${formatDate(endDisplayObj)}`;
+            }
+        } else {
+            const isSameDay = start.toDateString() === end.toDateString();
+            if (isSameDay) {
+                return `${formatDate(start)} ⋅ ${formatTime(start)} – ${formatTime(end)}`;
+            } else {
+                return `${formatDate(start)}, ${formatTime(start)} – ${formatDate(end)}, ${formatTime(end)}`;
+            }
         }
     },
 

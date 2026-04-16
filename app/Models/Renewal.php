@@ -16,6 +16,7 @@ class Renewal extends Model
         'start_date',
         'Renew_Date',
         'status_id',
+        'remarks',
         'tenant_id',
     ];
 

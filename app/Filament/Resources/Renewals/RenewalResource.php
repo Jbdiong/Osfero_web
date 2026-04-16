@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Renewals;
 
 use App\Filament\Resources\Renewals\Pages;
-use App\Filament\Resources\Renewals\RelationManagers;
 use App\Models\Renewal;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -11,8 +10,8 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Forms\Components\DatePicker;
+use App\Filament\Resources\Renewals\Schemas\RenewalForm;
+use App\Filament\Resources\Renewals\Tables\RenewalsTable;
 
 class RenewalResource extends Resource
 {
@@ -48,107 +47,12 @@ class RenewalResource extends Resource
 
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('label')
-                    ->maxLength(255)
-                    ->default(null),
-                Forms\Components\DatePicker::make('start_date')
-                    ->displayFormat('d/m/Y')
-                    ->native(false)
-                    ->required()
-                    ->live(),
-                Forms\Components\Select::make('duration')
-                    ->options([
-                        1 => '1 Month',
-                        2 => '2 Months',
-                        3 => '3 Months',
-                        4 => '4 Months',
-                        5 => '5 Months',
-                        6 => '6 Months',
-                        7 => '7 Months',
-                        12 => '1 Year',
-                    ])
-                    ->label('Duration')
-                    ->placeholder('Select Duration')
-                    ->dehydrated(false)
-                    ->live()
-                    ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, ?int $state) {
-                        if (! $state) {
-                            return;
-                        }
-
-                        $startDate = $get('start_date');
-                        if (! $startDate) {
-                            $startDate = now();
-                            $set('start_date', $startDate->format('Y-m-d'));
-                        } else {
-                            $startDate = \Carbon\Carbon::parse($startDate);
-                        }
-
-                        $set('Renew_Date', $startDate->addMonths($state)->subDay()->format('Y-m-d'));
-                    }),
-                Forms\Components\DatePicker::make('Renew_Date')
-                    ->required()
-                    ->displayFormat('d/m/Y')
-                    ->native(false)
-                    ->label('Expired Date')
-                    ->after('start_date'),
-                Forms\Components\Select::make('status_id')
-                    ->relationship('status', 'name', fn ($query) => $query->whereHas('parent', fn ($q) => $q->where('name', 'Renewal Status')))
-                    ->default(null),
-                Forms\Components\Select::make('lead_id')
-                    ->relationship('lead', 'Shop_Name')
-                    ->searchable()
-                    ->preload()
-                    ->default(null),
-                Forms\Components\Select::make('tenant_id')
-                    ->relationship('tenant', 'name')
-                    ->required()
-                    ->default(fn () => auth()->user()->tenant_id)
-                    ->hidden(fn () => auth()->user()->tenant_id !== null)
-                    ->dehydrated(true),
-            ]);
+        return RenewalForm::configure($form);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                Tables\Columns\TextColumn::make('label')
-                    ->searchable()
-                    ->label('Label')
-                    ->description(fn (Renewal $record) => $record->lead?->Shop_Name),
-                Tables\Columns\TextColumn::make('start_date')
-                    ->date('d M Y')
-                    ->sortable()
-                    ->label('Start Date'),
-                Tables\Columns\TextColumn::make('Renew_Date')
-                    ->date('d M Y')
-                    ->sortable()
-                    ->label('Expired Date')
-                    ->color(fn (Renewal $record) => $record->Renew_Date < now()->startOfDay() ? 'danger' : null),
-                Tables\Columns\TextColumn::make('status.name')
-                    ->badge()
-                    ->sortable()
-                    ->label('Status'),
-            ])
-            ->defaultSort('Renew_Date', 'asc')
-            ->recordClasses(fn (Renewal $record) => match (true) {
-                $record->Renew_Date < now()->startOfDay() => 'bg-red-50 dark:bg-red-900/10',
-                default => null,
-            })
-            ->filters([
-                //
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
+        return RenewalsTable::configure($table);
     }
     
     public static function getEloquentQuery(): Builder

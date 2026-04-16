@@ -8,8 +8,8 @@
         .fc-scroller::-webkit-scrollbar-thumb:hover { background: #555; }
         .fc-event { border-left-width: 4px; border-radius: 0.375rem; padding: 0.5rem; }
         .fc-event-title { font-weight: 500; color: #111827; font-size: 0.75rem; }
-        .fc-timegrid-now-indicator-line { border-color: #2563eb; border-width: 1px; }
-        .fc-timegrid-now-indicator-arrow { border-color: #2563eb; }
+        .fc-timegrid-now-indicator-line { border-color: #ea4335; border-width: 2px; }
+        .fc-timegrid-now-indicator-arrow { border: none; background-color: #ea4335; border-radius: 50%; width: 10px; height: 10px; margin-top: -4px; }
         .fc-timegrid-col { border-color: #e5e7eb; }
         .fc-timegrid-slot-label { border-color: #e5e7eb; font-size: 0.75rem; color: #6b7280; }
         
@@ -53,7 +53,7 @@
                 x-cloak
                 wire:ignore
             >
-        <div class="grid md:grid-cols-4 gap-4 h-full">
+        <div class="grid md:grid-cols-5 gap-4 h-full">
             <!-- Left Sidebar: Widgets -->
             <div class="md:col-span-1 grid-rows-3 grid h-full flex flex-col gap-4 row-span-1">
                 
@@ -101,7 +101,7 @@
                     <template x-if="upcomingDeadline && upcomingDeadline.title">
                         <div>
                             <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Upcoming deadline</h3>
+                                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Deadline</h3>
                                 <div class="px-2 py-1 rounded-full text-xs font-semibold"
                                      :class="upcomingDeadline.is_overdue ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'">
                                     <span class="flex items-center gap-1">
@@ -139,7 +139,7 @@
                 <!-- Overdue Renewals -->
                  <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 row-span-1">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Overdue renewal</h3>
+                        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Renewal</h3>
                         <button @click="openRenewalTableModal" class="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">View all</button>
                     </div>
                     
@@ -163,13 +163,13 @@
             </div>
 
             <!-- Main Calendar -->
-            <div class="md:col-span-3 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col row-span-1">
+            <div class="md:col-span-4 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col row-span-1">
                 
                 <!-- Calendar Toolbar -->
                 <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
                     <!-- Left: Title or Actions -->
                     <div>
-                         <a href="#" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                         <a href="#" @click.prevent="openEventModal()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                             <x-heroicon-o-plus class="w-5 h-5" />
                             <span>New task</span>
                         </a>
@@ -419,6 +419,144 @@
                      </div>
                  </div>
              </div>
+        </div>
+        <!-- EVENT HOVER CARD -->
+        <div 
+            x-show="showEventHoverCard"
+            x-transition.opacity.duration.150ms
+            class="fixed z-[110] bg-white dark:bg-gray-800 rounded-lg shadow-[0_4px_20px_rgb(0,0,0,0.1)] border border-gray-100 dark:border-gray-700 p-5 w-[320px] pointer-events-none"
+            :style="`top: ${hoverCardPosition.top}px; left: ${hoverCardPosition.left}px;`"
+            style="display: none;"
+        >
+            <h3 class="text-lg font-normal text-gray-800 dark:text-white mb-4 leading-tight font-sans tracking-wide" x-text="hoverCardData.title"></h3>
+            
+            <div class="space-y-4">
+                <!-- Calendar Name -->
+                <div class="flex items-center gap-4">
+                    <div class="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                        <x-heroicon-s-user class="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    </div>
+                    <div class="text-sm text-gray-700 dark:text-gray-300 font-sans tracking-wide" x-text="hoverCardData.calendarName"></div>
+                </div>
+
+                <!-- Date -->
+                <div class="flex items-center gap-4">
+                    <div class="w-6 flex items-center justify-center">
+                         <x-heroicon-o-clock class="w-5 h-5 text-gray-700 dark:text-gray-400" stroke-width="1.5" />
+                    </div>
+                    <div class="text-sm text-gray-700 dark:text-gray-300 font-sans tracking-wide" x-text="hoverCardData.dateStr"></div>
+                </div>
+
+                <!-- Creator -->
+                 <div class="flex items-center gap-4">
+                    <div class="w-6 flex items-center justify-center">
+                        <x-heroicon-o-user class="w-5 h-5 text-gray-700 dark:text-gray-400" stroke-width="1.5" />
+                    </div>
+                    <div class="text-sm text-gray-700 dark:text-gray-300 font-sans tracking-wide">Created by: <span x-text="hoverCardData.creator"></span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW EVENT/TASK MODAL -->
+        <div 
+            x-show="showEventModal" 
+            class="fixed inset-0 z-[100]" 
+            aria-labelledby="modal-title" 
+            role="dialog" 
+            aria-modal="true"
+            style="display: none;"
+        >
+            <!-- Background overlay -->
+            <div 
+                class="fixed inset-0 transition-opacity" 
+                @click="closeEventModal"
+                aria-hidden="true"
+            ></div>
+
+            <!-- Absolute Modal Panel -->
+            <div 
+                x-show="showEventModal"
+                x-transition:enter="ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="ease-in duration-150"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-95"
+                class="fixed z-[105] bg-white dark:bg-gray-800 rounded-lg text-left shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-200 dark:border-gray-700 transform transition-all sm:max-w-[450px] w-full"
+                :style="`top: ${eventModalPosition.top}px; left: ${eventModalPosition.left}px;`"
+            >
+                    <!-- Header Actions -->
+                    <div class="absolute top-0 right-0 pt-4 pr-4 flex gap-2">
+                        <button @click="closeEventModal" type="button" class="bg-transparent rounded-md text-gray-400 hover:text-gray-500 focus:outline-none">
+                            <span class="sr-only">Close</span>
+                           <x-heroicon-o-x-mark class="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 px-6 pt-8 pb-4 sm:p-6 sm:pb-4 rounded-lg">
+                        <div class="mt-3 text-left w-full">
+                            
+                            <!-- Title Input -->
+                            <div class="mb-4">
+                                <input type="text" x-model="eventForm.title" class="w-full border-0 border-b-2 border-blue-600 focus:ring-0 focus:border-blue-700 text-xl font-medium dark:bg-gray-800 dark:text-white placeholder-gray-500 p-0 pb-1 bg-transparent" placeholder="Add title and time">
+                            </div>
+
+                            <!-- Type Toggle -->
+                            <div class="flex gap-2 mb-6 mt-4">
+                                <button @click="eventForm.type = 'event'" :class="eventForm.type === 'event' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'" class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors">Event</button>
+                                <button @click="eventForm.type = 'task'" :class="eventForm.type === 'task' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'" class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors">Task</button>
+                            </div>
+
+                            <!-- DateTime Display -->
+                            <div class="flex items-start gap-4 mb-4">
+                                <x-heroicon-o-clock class="w-5 h-5 text-gray-500 mt-0.5" />
+                                <div class="flex-1">
+                                    <div class="text-sm text-gray-800 dark:text-gray-200" x-text="formatEventDateTimeDisplay()"></div>
+                                    <div class="text-xs text-gray-500 mt-0.5">Does not repeat</div>
+                                </div>
+                                <button class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">Add time</button>
+                            </div>
+
+                            <!-- Other Inputs mimicking Google -->
+                            <div class="flex items-center gap-4 mb-4">
+                                <x-heroicon-o-users class="w-5 h-5 text-gray-500" />
+                                <input type="text" class="flex-1 border-0 focus:ring-0 text-sm dark:bg-gray-800 dark:text-white p-0 bg-transparent placeholder-gray-500" placeholder="Add guests">
+                            </div>
+
+                            <div class="flex items-center gap-4 mb-4">
+                                <x-heroicon-o-video-camera class="w-5 h-5 text-gray-500" />
+                                <button class="bg-blue-600 text-white px-4 py-1.5 rounded-md text-sm hover:bg-blue-700 transition">Add Google Meet video conferencing</button>
+                            </div>
+                            
+                            <div class="flex items-center gap-4 mb-4">
+                                <x-heroicon-o-map-pin class="w-5 h-5 text-gray-500" />
+                                <input type="text" class="flex-1 border-0 focus:ring-0 text-sm dark:bg-gray-800 dark:text-white p-0 bg-transparent placeholder-gray-500" placeholder="Add location">
+                            </div>
+
+                            <div class="flex items-center gap-4 mb-4">
+                                <x-heroicon-o-bars-3-bottom-left class="w-5 h-5 text-gray-500" />
+                                <input type="text" class="flex-1 border-0 focus:ring-0 text-sm dark:bg-gray-800 dark:text-white p-0 bg-transparent placeholder-gray-500" placeholder="Add description or attachments">
+                            </div>
+                            
+                            <div class="flex items-center gap-4 mb-2">
+                                <x-heroicon-o-calendar class="w-5 h-5 text-gray-500" />
+                                <div class="flex-1 flex flex-col items-start gap-0.5">
+                                    <div class="text-sm font-medium text-gray-800 dark:text-gray-200">User Setup</div>
+                                    <div class="text-xs text-gray-500">Free · Default visibility · Notify the day before at 5pm</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-gray-800 px-4 pt-2 pb-6 sm:px-6 flex justify-between items-center rounded-b-lg">
+                        <button type="button" class="text-sm text-blue-600 font-medium hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">More options</button>
+                        <button @click="saveEvent" type="button" class="inline-flex justify-center rounded-full shadow-sm px-6 py-2 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none transition">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         </div>

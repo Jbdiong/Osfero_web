@@ -19,11 +19,12 @@
     "dependencies": {
         "@fullcalendar/core": "^6.1.19",
         "@fullcalendar/daygrid": "^6.1.19",
+        "@fullcalendar/google-calendar": "^6.1.20",
         "@fullcalendar/interaction": "^6.1.19",
         "@fullcalendar/list": "^6.1.20",
         "@fullcalendar/timegrid": "^6.1.19",
         "@fullcalendar/vue3": "^6.1.19",
-        "@inertiajs/progress": "^0.2.7",
+        "@inertiajs/progress": "^0.1.2",
         "@inertiajs/vue3": "^2.2.19",
         "@vitejs/plugin-vue": "^6.0.0",
         "vue": "^3.5.25",
