@@ -18,7 +18,8 @@ class RenewalForm
                     ->displayFormat('d/m/Y')
                     ->native(false)
                     ->required()
-                    ->live(),
+                    ->live()
+                    ->afterStateUpdated(fn (Forms\Set $set, Forms\Get $get) => self::updateRenewDate($set, $get)),
                 Forms\Components\Select::make('duration')
                     ->options([
                         1 => '1 Month',
@@ -34,21 +35,7 @@ class RenewalForm
                     ->placeholder('Select Duration')
                     ->dehydrated(false)
                     ->live()
-                    ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, ?int $state) {
-                        if (! $state) {
-                            return;
-                        }
-
-                        $startDate = $get('start_date');
-                        if (! $startDate) {
-                            $startDate = now();
-                            $set('start_date', $startDate->format('Y-m-d'));
-                        } else {
-                            $startDate = \Carbon\Carbon::parse($startDate);
-                        }
-
-                        $set('Renew_Date', $startDate->addMonths($state)->subDay()->format('Y-m-d'));
-                    }),
+                    ->afterStateUpdated(fn (Forms\Set $set, Forms\Get $get) => self::updateRenewDate($set, $get)),
                 Forms\Components\DatePicker::make('Renew_Date')
                     ->required()
                     ->displayFormat('d/m/Y')
@@ -72,5 +59,24 @@ class RenewalForm
                 Forms\Components\Textarea::make('remarks')
                     ->columnSpanFull(),
             ]);
+    }
+
+    private static function updateRenewDate(Forms\Set $set, Forms\Get $get): void
+    {
+        $startDate = $get('start_date');
+        $duration = $get('duration');
+
+        if (! $duration) {
+            return;
+        }
+
+        if (! $startDate) {
+            $startDate = now();
+            $set('start_date', $startDate->format('Y-m-d'));
+        } else {
+            $startDate = \Carbon\Carbon::parse($startDate);
+        }
+
+        $set('Renew_Date', $startDate->addMonths((int) $duration)->subDay()->format('Y-m-d'));
     }
 }
