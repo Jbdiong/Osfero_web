@@ -19,6 +19,7 @@ class Event extends Model
         'end_time',
         'status_id',
         'tenant_id',
+        'customer_id',
     ];
 
     protected $casts = [
@@ -44,5 +45,10 @@ class Event extends Model
     public function eventPICs(): HasMany
     {
         return $this->hasMany(EventPIC::class);
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 }

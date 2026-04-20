@@ -16,6 +16,7 @@ class CommissionEntry extends Model
 
     protected $fillable = [
         'tenant_id',
+        'customer_id',
         'user_id',
         'type',
         'entry_date',
@@ -92,5 +93,10 @@ class CommissionEntry extends Model
         return $this->belongsToMany(User::class, 'commission_pics', 'commission_entry_id', 'user_id')
                     ->withPivot(['split_percentage', 'tenant_id'])
                     ->withTimestamps();
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 }

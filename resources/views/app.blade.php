@@ -23,3 +23,4 @@
         @inertia
     </body>
 </html>
+

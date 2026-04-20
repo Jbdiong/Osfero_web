@@ -1,6 +1,7 @@
 
 <x-filament-panels::page>
-    @vite(['resources/css/app.css', 'resources/js/filament/calendar.js'])
+    @vite('resources/css/app.css')
+    @vite('resources/js/filament/calendar.js')
     <style>
         .fc-scroller::-webkit-scrollbar { width: 8px; }
         .fc-scroller::-webkit-scrollbar-track { background: #f1f1f1; }
@@ -48,14 +49,16 @@
                 x-data="filamentCalendar({ 
             events: @js($events ?? []),
             upcomingDeadline: @js($upcoming_deadline ?? null),
-            overdueRenewals: @js($overdue_renewals ?? [])
+            overdueRenewals: @js($overdue_renewals ?? []),
+            customers: @js($customers ?? []),
+            tenantId: @js($tenant_id ?? null)
         })"
                 x-cloak
                 wire:ignore
             >
         <div class="grid md:grid-cols-5 gap-4 h-full">
             <!-- Left Sidebar: Widgets -->
-            <div class="md:col-span-1 grid-rows-3 grid h-full flex flex-col gap-4 row-span-1">
+            <div class="md:col-span-1 grid-rows-3 grid h-full flex flex-col gap-4 row-span-1 min-h-0">
                 
                 <!-- Mini Calendar Widget -->
                 <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 row-span-1">
@@ -137,13 +140,13 @@
                 </div>
 
                 <!-- Overdue Renewals -->
-                 <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 row-span-1">
-                    <div class="flex items-center justify-between mb-4">
+                 <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 row-span-1 flex flex-col min-h-0 overflow-hidden">
+                    <div class="flex items-center justify-between mb-4 flex-shrink-0">
                         <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Renewal</h3>
                         <button @click="openRenewalTableModal" class="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">View all</button>
                     </div>
                     
-                    <div class="space-y-4 max-h-80 overflow-y-auto pr-1">
+                    <div class="space-y-4 overflow-y-auto pr-1" style="max-height: calc(3 * 64px);">
                         <template x-for="renewal in sidebarRenewals" :key="renewal.id">
                             <div>
                                 <h4 class="font-semibold text-gray-900 dark:text-white text-sm mb-1" x-text="renewal.label"></h4>
@@ -493,18 +496,12 @@
                         </button>
                     </div>
 
-                    <div class="bg-white dark:bg-gray-800 px-6 pt-8 pb-4 sm:p-6 sm:pb-4 rounded-lg">
+                    <div class="bg-white border-2 border-[#000000] dark:bg-gray-800 px-6 pt-8 pb-4 sm:p-6 sm:pb-4 rounded-lg">
                         <div class="mt-3 text-left w-full">
                             
                             <!-- Title Input -->
                             <div class="mb-4">
-                                <input type="text" x-model="eventForm.title" class="w-full border-0 border-b-2 border-blue-600 focus:ring-0 focus:border-blue-700 text-xl font-medium dark:bg-gray-800 dark:text-white placeholder-gray-500 p-0 pb-1 bg-transparent" placeholder="Add title and time">
-                            </div>
-
-                            <!-- Type Toggle -->
-                            <div class="flex gap-2 mb-6 mt-4">
-                                <button @click="eventForm.type = 'event'" :class="eventForm.type === 'event' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'" class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors">Event</button>
-                                <button @click="eventForm.type = 'task'" :class="eventForm.type === 'task' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'" class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors">Task</button>
+                                <input type="text" x-model="eventForm.title" id="event-title-input" class="w-full border-1 border-b-1 border-blue-600 bg-red-600 focus:outline-none text-xl font-medium bg-transparent placeholder:text-gray-400 dark:text-white pb-1" placeholder="Add title">
                             </div>
 
                             <!-- DateTime Display -->
@@ -514,44 +511,35 @@
                                     <div class="text-sm text-gray-800 dark:text-gray-200" x-text="formatEventDateTimeDisplay()"></div>
                                     <div class="text-xs text-gray-500 mt-0.5">Does not repeat</div>
                                 </div>
-                                <button class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">Add time</button>
                             </div>
 
-                            <!-- Other Inputs mimicking Google -->
+                            <!-- Customer Select -->
                             <div class="flex items-center gap-4 mb-4">
-                                <x-heroicon-o-users class="w-5 h-5 text-gray-500" />
-                                <input type="text" class="flex-1 border-0 focus:ring-0 text-sm dark:bg-gray-800 dark:text-white p-0 bg-transparent placeholder-gray-500" placeholder="Add guests">
+                                <x-heroicon-o-user-circle class="w-5 h-5 text-gray-500 flex-shrink-0" />
+                                <select x-model="eventForm.customer_id" class="flex-1 border-0 border-b rounde border-gray-200 dark:border-gray-600 focus:outline-none bg-transparent text-sm text-gray-700 dark:text-white py-1">
+                                    <option value="">No customer</option>
+                                    <template x-for="c in customers" :key="c.id">
+                                        <option :value="c.id" x-text="c.label"></option>
+                                    </template>
+                                </select>
                             </div>
 
-                            <div class="flex items-center gap-4 mb-4">
-                                <x-heroicon-o-video-camera class="w-5 h-5 text-gray-500" />
-                                <button class="bg-blue-600 text-white px-4 py-1.5 rounded-md text-sm hover:bg-blue-700 transition">Add Google Meet video conferencing</button>
-                            </div>
-                            
-                            <div class="flex items-center gap-4 mb-4">
-                                <x-heroicon-o-map-pin class="w-5 h-5 text-gray-500" />
-                                <input type="text" class="flex-1 border-0 focus:ring-0 text-sm dark:bg-gray-800 dark:text-white p-0 bg-transparent placeholder-gray-500" placeholder="Add location">
+                            <!-- Description -->
+                            <div class="flex items-start gap-4 mb-4">
+                                <x-heroicon-o-bars-3-bottom-left class="w-5 h-5 text-gray-500 mt-0.5" />
+                                <textarea x-model="eventForm.description" rows="2" class="flex-1 border-0 border-b border-gray-200 dark:border-gray-600 focus:outline-none bg-transparent text-sm dark:text-white resize-none placeholder:text-gray-400 py-1" placeholder="Add description"></textarea>
                             </div>
 
-                            <div class="flex items-center gap-4 mb-4">
-                                <x-heroicon-o-bars-3-bottom-left class="w-5 h-5 text-gray-500" />
-                                <input type="text" class="flex-1 border-0 focus:ring-0 text-sm dark:bg-gray-800 dark:text-white p-0 bg-transparent placeholder-gray-500" placeholder="Add description or attachments">
-                            </div>
-                            
-                            <div class="flex items-center gap-4 mb-2">
-                                <x-heroicon-o-calendar class="w-5 h-5 text-gray-500" />
-                                <div class="flex-1 flex flex-col items-start gap-0.5">
-                                    <div class="text-sm font-medium text-gray-800 dark:text-gray-200">User Setup</div>
-                                    <div class="text-xs text-gray-500">Free · Default visibility · Notify the day before at 5pm</div>
-                                </div>
-                            </div>
+                            <!-- Error Message -->
+                            <div x-show="eventForm.error" x-cloak class="text-red-500 text-xs mt-1" x-text="eventForm.error"></div>
 
                         </div>
                     </div>
                     
-                    <div class="bg-white dark:bg-gray-800 px-4 pt-2 pb-6 sm:px-6 flex justify-between items-center rounded-b-lg">
-                        <button type="button" class="text-sm text-blue-600 font-medium hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">More options</button>
-                        <button @click="saveEvent" type="button" class="inline-flex justify-center rounded-full shadow-sm px-6 py-2 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none transition">
+                    <div class="bg-amber-600 dark:bg-gray-800 px-4 pt-2 pb-6 sm:px-6 flex justify-between items-center rounded-b-lg">
+                        <div class="text-xs text-gray-400" x-show="eventForm.saving">Saving...</div>
+                        <div x-show="!eventForm.saving"></div>
+                        <button @click="saveEvent" :disabled="eventForm.saving" type="button" class="inline-flex justify-center rounded-full shadow-sm px-6 py-2 bg-red-600 text-sm font-medium text-black hover:bg-amber-500 focus:outline-none transition disabled:opacity-50">
                             Save
                         </button>
                     </div>
@@ -563,3 +551,5 @@
     </template>
 </div>
 </x-filament-panels::page>
+
+

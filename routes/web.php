@@ -22,3 +22,9 @@ use Illuminate\Support\Facades\Route;
 //     Route::get('/renewals', [CalendarController::class, 'renewals'])->name('renewals.index');
 //     Route::get('/tracking', [TrackingController::class, 'index'])->name('tracking.index');
 // });
+
+// Quick event save from calendar modal (Filament session auth)
+Route::middleware(['web', 'auth'])->post('/calendar/events/quick-store', [
+    \App\Filament\Resources\Events\Pages\ListEvents::class,
+    'storeQuickEvent',
+])->name('calendar.events.quick-store');

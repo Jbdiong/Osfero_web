@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Inventory\Pages;
 
-use App\Filament\Resources\Inventory\ItemResource;
+use App\Filament\Resources\Inventory\Items\Items\ItemResource;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Auth;
 
@@ -16,3 +16,10 @@ class CreateItem extends CreateRecord
         return $data;
     }
 }
+
+
+
+
+
+
+

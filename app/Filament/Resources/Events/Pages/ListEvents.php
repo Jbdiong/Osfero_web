@@ -88,7 +88,44 @@ class ListEvents extends ListRecords
             }),
             'upcoming_deadline' => $upcomingDeadlineData ?: null,
             'overdue_renewals' => $renewals,
+            'customers' => \App\Models\Customer::where('tenant_id', $tenantId)
+                ->orderBy('name')
+                ->get(['id', 'name', 'company'])
+                ->map(fn($c) => ['id' => $c->id, 'label' => $c->name . ($c->company ? ' (' . $c->company . ')' : '')])
+                ->values(),
+            'tenant_id' => $tenantId,
         ];
+    }
+
+    // POST handler for quick-save from the calendar modal
+    public function storeQuickEvent(\Illuminate\Http\Request $request): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'title'       => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'start_time'  => 'required|date',
+            'end_time'    => 'required|date|after_or_equal:start_time',
+            'customer_id' => 'nullable|exists:customers,id',
+        ]);
+        $user = auth()->user();
+        $tenantId = $user->tenant_id;
+        $event = \App\Models\Event::create([
+            'title'       => $data['title'],
+            'description' => $data['description'] ?? null,
+            'start_time'  => $data['start_time'],
+            'end_time'    => $data['end_time'],
+            'customer_id' => $data['customer_id'] ?? null,
+            'tenant_id'   => $tenantId,
+        ]);
+        return response()->json([
+            'success' => true,
+            'event' => [
+                'id'    => $event->id,
+                'title' => $event->title,
+                'start' => $event->start_time,
+                'end'   => $event->end_time,
+            ],
+        ]);
     }
 
     protected function getHeaderActions(): array

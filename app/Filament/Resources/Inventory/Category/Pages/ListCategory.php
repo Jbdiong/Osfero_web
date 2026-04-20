@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Inventory\Category\Pages;
 
-use App\Filament\Resources\Inventory\CategoryResource;
+use App\Filament\Resources\Inventory\Categories\Categories\CategoryResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\Auth;
@@ -22,3 +22,10 @@ class ListCategory extends ListRecords
         ];
     }
 }
+
+
+
+
+
+
+

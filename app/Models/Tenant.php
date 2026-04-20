@@ -140,4 +140,34 @@ class Tenant extends Model
     {
         return $this->hasOne(CommissionSetting::class);
     }
+
+    public function customers(): HasMany
+    {
+        return $this->hasMany(Customer::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function packages(): HasMany
+    {
+        return $this->hasMany(Package::class);
+    }
+
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    public function packageTemplateItems(): HasMany
+    {
+        return $this->hasMany(PackageTemplateItem::class);
+    }
+
+    public function usageLogs(): HasMany
+    {
+        return $this->hasMany(UsageLog::class);
+    }
 }

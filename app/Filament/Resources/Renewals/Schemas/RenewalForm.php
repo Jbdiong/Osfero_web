@@ -50,12 +50,13 @@ class RenewalForm
                     ->searchable()
                     ->preload()
                     ->default(null),
-                Forms\Components\Select::make('tenant_id')
-                    ->relationship('tenant', 'name')
-                    ->required()
-                    ->default(fn () => auth()->user()->tenant_id)
-                    ->hidden(fn () => auth()->user()->tenant_id !== null)
-                    ->dehydrated(true),
+                Forms\Components\Select::make('customer_id')
+                    ->relationship('customer', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->nullable(),
+                Forms\Components\Hidden::make('tenant_id')
+                    ->default(fn () => auth()->user()->last_active_tenant_id),
                 Forms\Components\Textarea::make('remarks')
                     ->columnSpanFull(),
             ]);
@@ -80,3 +81,10 @@ class RenewalForm
         $set('Renew_Date', $startDate->addMonths((int) $duration)->subDay()->format('Y-m-d'));
     }
 }
+
+
+
+
+
+
+

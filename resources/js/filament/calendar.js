@@ -18,7 +18,9 @@ const filamentCalendarFactory = ({
     events = [],
     initialDate = null,
     upcomingDeadline = null,
-    overdueRenewals = []
+    overdueRenewals = [],
+    customers = [],
+    tenantId = null
 }) => ({
     // --- Main Calendar State ---
     calendar: null,
@@ -30,6 +32,8 @@ const filamentCalendarFactory = ({
     // --- Sidebar Data ---
     upcomingDeadline: upcomingDeadline || { title: null, more: null, countdown: null },
     sidebarRenewals: overdueRenewals || [],
+    customers: customers || [],
+    tenantId: tenantId || null,
 
     // --- Modals State ---
     showNewRenewalModal: false,
@@ -63,10 +67,14 @@ const filamentCalendarFactory = ({
     eventModalPosition: { top: 0, left: 0 },
     eventForm: {
         title: '',
-        type: 'event', // event or task
+        type: 'event',
         start: null,
         end: null,
-        allDay: true
+        allDay: true,
+        customer_id: '',
+        description: '',
+        saving: false,
+        error: ''
     },
 
     // --- Hover Event Tooltip ---
@@ -362,7 +370,11 @@ const filamentCalendarFactory = ({
             type: 'event',
             start: start,
             end: end,
-            allDay: allDay
+            allDay: allDay,
+            customer_id: '',
+            description: '',
+            saving: false,
+            error: ''
         };
 
         if (jsEvent) {
@@ -399,9 +411,60 @@ const filamentCalendarFactory = ({
         }
     },
 
-    saveEvent() {
-        // Here you would connect to Laravel/Livewire to save the draft event/task
-        this.closeEventModal();
+    async saveEvent() {
+        if (!this.eventForm.title.trim()) {
+            this.eventForm.error = 'Title is required.';
+            return;
+        }
+        this.eventForm.error = '';
+        this.eventForm.saving = true;
+
+        const toISO = (d) => {
+            if (!d) return null;
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        };
+
+        let startTime = this.eventForm.start;
+        let endTime = this.eventForm.end;
+        
+        // For all-day events, treat end as same day (since FC end is exclusive)
+        if (this.eventForm.allDay) {
+            endTime = startTime ? new Date(startTime.getTime() + 60 * 60000) : startTime;
+        }
+
+        try {
+            const response = await axios.post('/calendar/events/quick-store', {
+                title:       this.eventForm.title.trim(),
+                description: this.eventForm.description || null,
+                start_time:  toISO(startTime),
+                end_time:    toISO(endTime),
+                customer_id: this.eventForm.customer_id || null,
+            });
+
+            if (response.data.success) {
+                const ev = response.data.event;
+                // Add it live to the calendar without re-fetching
+                this.calendar.addEvent({
+                    id:              String(ev.id),
+                    title:           ev.title,
+                    start:           ev.start,
+                    end:             ev.end,
+                    backgroundColor: '#ffd7b5',
+                    borderColor:     '#ff6700',
+                    textColor:       '#000000',
+                    display:         'block',
+                });
+                this.closeEventModal();
+            }
+        } catch (err) {
+            const msg = err.response?.data?.message
+                ?? Object.values(err.response?.data?.errors ?? {})[0]?.[0]
+                ?? 'Failed to save. Please try again.';
+            this.eventForm.error = msg;
+        } finally {
+            this.eventForm.saving = false;
+        }
     },
 
     formatEventDateTimeDisplay() {

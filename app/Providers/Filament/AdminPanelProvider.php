@@ -43,6 +43,7 @@ class AdminPanelProvider extends PanelProvider
                 fn (): string => '<style>:root { --fi-topbar-height: 20rem; }</style>',
             )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
+            ->discoverClusters(in: app_path('Filament/Clusters'), for: 'App\Filament\Clusters')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->tenant(\App\Models\Tenant::class, slugAttribute: 'slug')
             ->tenantMenuItems([

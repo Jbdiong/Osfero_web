@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Inventory\Warehouse\Pages;
 
-use App\Filament\Resources\Inventory\WarehouseResource;
+use App\Filament\Resources\Inventory\Warehouses\Warehouses\WarehouseResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\Auth;
@@ -22,3 +22,10 @@ class ListWarehouse extends ListRecords
         ];
     }
 }
+
+
+
+
+
+
+

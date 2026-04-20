@@ -12,6 +12,7 @@ class Renewal extends Model
 
     protected $fillable = [
         'lead_id',
+        'customer_id',
         'label',
         'start_date',
         'Renew_Date',
@@ -38,5 +39,10 @@ class Renewal extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 }
