@@ -84,6 +84,28 @@ class TodolistForm
                                             ->default(null),
                                     ]),
 
+                                \Filament\Forms\Components\Section::make('Commission Status')
+                                    ->visible(fn ($record) => $record?->usageLogs()->exists())
+                                    ->schema([
+                                        \Filament\Forms\Components\Placeholder::make('commission_info')
+                                            ->label('')
+                                            ->content(function ($record) {
+                                                $log = $record->usageLogs()->latest()->first();
+                                                $hasEntry = $log?->commissionEntry()->exists();
+                                                
+                                                $html = '<div class="flex items-center gap-2 text-success-600 font-bold">';
+                                                $html .= '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                                                $html .= 'Submitted to Commission';
+                                                $html .= '</div>';
+                                                
+                                                if ($hasEntry) {
+                                                    $html .= '<div class="mt-2 text-xs text-gray-500">Log ID: #' . $log->id . '</div>';
+                                                }
+
+                                                return new \Illuminate\Support\HtmlString($html);
+                                            }),
+                                    ]),
+
                                 
                                 \Filament\Forms\Components\Section::make('Person in Charge (PICs)')
                                     ->schema([

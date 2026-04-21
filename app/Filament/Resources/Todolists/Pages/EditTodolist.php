@@ -13,6 +13,7 @@ class EditTodolist extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            TodolistResource::getSubmitCompletionAction(\Filament\Actions\Action::class),
             DeleteAction::make(),
         ];
     }

@@ -536,7 +536,7 @@
                         </div>
                     </div>
                     
-                    <div class="bg-amber-600 dark:bg-gray-800 px-4 pt-2 pb-6 sm:px-6 flex justify-between items-center rounded-b-lg">
+                    <div class="bg-white dark:bg-gray-800 px-4 pt-2 pb-6 sm:px-6 flex justify-between items-center rounded-b-lg">
                         <div class="text-xs text-gray-400" x-show="eventForm.saving">Saving...</div>
                         <div x-show="!eventForm.saving"></div>
                         <button @click="saveEvent" :disabled="eventForm.saving" type="button" class="inline-flex justify-center rounded-full shadow-sm px-6 py-2 bg-red-600 text-sm font-medium text-black hover:bg-amber-500 focus:outline-none transition disabled:opacity-50">

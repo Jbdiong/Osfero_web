@@ -90,11 +90,11 @@ class ListTodolists extends ListRecords
 
     public function updateTaskStatus(int $id, int $statusId)
     {
-        \App\Models\Todolist::where('id', $id)
-            ->where('tenant_id', auth()->user()->tenant_id)
-            ->update([
-                'status_id' => $statusId,
-            ]);
+        $task = \App\Models\Todolist::find($id);
+        
+        if ($task && $task->tenant_id == auth()->user()->tenant_id) {
+            $task->update(['status_id' => $statusId]);
+        }
 
         \Filament\Notifications\Notification::make()
             ->title('Todolist updated')
