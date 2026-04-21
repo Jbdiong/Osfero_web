@@ -82,8 +82,13 @@ class OrderForm
                         $path = is_array($file) ? reset($file) : $file;
 
                         // Check if the current state is an actively uploading temporary file
-                        if ($path instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile) {
-                            return new \Illuminate\Support\HtmlString('<div style="padding: 1rem; color: #6b7280; font-style: italic; border: 1px dashed #d1d5db; border-radius: 0.5rem; margin-top: 0.5rem;">Preview will be completely available after you save the form.</div>');
+                        if (is_object($path) && method_exists($path, 'temporaryUrl')) {
+                            try {
+                                $url = $path->temporaryUrl();
+                                return new \Illuminate\Support\HtmlString('<iframe src="'.$url.'" style="width: 100%; height: 600px; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-top: 0.5rem;"></iframe>');
+                            } catch (\Throwable $e) {
+                                return new \Illuminate\Support\HtmlString('<div style="padding: 1rem; color: #6b7280; font-style: italic; border: 1px dashed #d1d5db; border-radius: 0.5rem; margin-top: 0.5rem;">The file is ready, but the preview could not be generated yet. It will be available after saving.</div>');
+                            }
                         }
 
                         // Otherwise it's a recognized string path to the storage folder

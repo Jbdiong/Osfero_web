@@ -70,11 +70,17 @@ class UsageLog extends Model
         'qty_deducted',
         'date_delivered',
         'notes',
+        'commission_entry_id',
     ];
 
     protected $casts = [
         'date_delivered' => 'date',
     ];
+
+    public function commissionEntry(): BelongsTo
+    {
+        return $this->belongsTo(CommissionEntry::class);
+    }
 
     public function tenant(): BelongsTo
     {

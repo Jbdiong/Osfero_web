@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\Inventory\Categories\Categories;
+namespace App\Filament\Resources\Inventory;
 
 use App\Models\Category;
 use App\Filament\Resources\Inventory\Category\RelationManagers\SubfoldersRelationManager;

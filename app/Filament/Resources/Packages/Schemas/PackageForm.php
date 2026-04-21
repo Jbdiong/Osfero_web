@@ -1,10 +1,7 @@
 <?php
-
 namespace App\Filament\Resources\Packages\Schemas;
-
 use Filament\Forms;
 use Filament\Forms\Form;
-
 class PackageForm
 {
     public static function configure(Form $form): Form
@@ -39,10 +36,3 @@ class PackageForm
             ]);
     }
 }
-
-
-
-
-
-
-

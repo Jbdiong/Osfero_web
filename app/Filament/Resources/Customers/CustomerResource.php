@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Customers;
 
 use App\Filament\Resources\Customers\Pages;
 use App\Filament\Resources\Customers\RelationManagers;
+use App\Filament\Clusters\CustomerCluster;
 use App\Models\Customer;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -18,6 +19,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class CustomerResource extends Resource
 {
     protected static ?string $model = Customer::class;
+
+    protected static ?string $cluster = CustomerCluster::class;
 
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
@@ -35,6 +38,7 @@ class CustomerResource extends Resource
     public static function getRelations(): array
     {
         return [
+            RelationManagers\EventsRelationManager::class,
             RelationManagers\OrdersRelationManager::class,
         ];
     }

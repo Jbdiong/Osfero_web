@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\Inventory\Items\Items;
+namespace App\Filament\Resources\Inventory;
 
 use App\Filament\Resources\Inventory\Pages;
 use App\Filament\Resources\Inventory\Schemas\ItemForm;

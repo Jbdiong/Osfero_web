@@ -1,17 +1,13 @@
 <?php
-
 namespace App\Filament\Resources\Packages\Tables;
-
 use Filament\Tables;
 use Filament\Tables\Table;
-
 class PackagesTable
 {
     public static function configure(Table $table): Table
     {
         return $table
             ->columns([
-
                 Tables\Columns\TextColumn::make('package_name')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('base_price')
@@ -39,10 +35,3 @@ class PackagesTable
             ]);
     }
 }
-
-
-
-
-
-
-

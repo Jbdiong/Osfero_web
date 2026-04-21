@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Inventory\Pages;
 
-use App\Filament\Resources\Inventory\Items\Items\ItemResource;
+use App\Filament\Resources\Inventory\ItemResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 

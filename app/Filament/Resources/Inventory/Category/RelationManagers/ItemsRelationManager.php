@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Inventory\Category\RelationManagers;
 
-use App\Filament\Resources\Inventory\Items\Items\ItemResource;
+use App\Filament\Resources\Inventory\ItemResource;
 use App\Filament\Resources\Inventory\Schemas\ItemForm;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;

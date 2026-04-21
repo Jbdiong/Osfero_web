@@ -31,39 +31,64 @@ class StaffCommissionWidget extends BaseWidget
         $month = now()->month;
         $year  = now()->year;
 
-        // Current user's entries for THIS month
+        // Current user's entries for THIS month, based on PIC status and only APPROVED
         $entries = CommissionEntry::where('tenant_id', $tenantId)
-            ->where('user_id', $user->id)
             ->where('month', $month)
             ->where('year', $year)
+            ->where('is_approved', true) // Only approved commissions can be counted
+            ->whereHas('pics', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->with(['pics' => function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            }])
             ->get();
 
+        $designQty         = 0.0;
+        $adsClientsPortion = 0.0;
+        $salesValuePortion = 0.0;
+
+        foreach ($entries as $entry) {
+            $myPic = $entry->pics->first();
+            $splitFactor = $myPic ? ((float) $myPic->split_percentage / 100) : 1.0;
+
+            if ($entry->type === 'design' || $entry->type === 'video') {
+                // Fix: Video counts as 2x Design according to form description
+                $multiplier = $entry->type === 'video' ? 2.0 : 1.0;
+                $portion    = (float) $entry->quantity * $multiplier * $splitFactor;
+                
+                $designQty += $portion;
+            } elseif ($entry->type === 'ads_management') {
+                $adsClientsPortion += (1.0 * $splitFactor);
+            } elseif ($entry->type === 'sales') {
+                $salesValuePortion += ((float) $entry->package_value * $splitFactor);
+            }
+        }
+
         // 1. Calculate Design Total + Progress
-        $designQty  = (int) $entries->where('type', 'design')->sum('quantity');
-        $designComm = $settings->designCommission($designQty);
-        $currentPct = $settings->designBonusPercent($designQty);
-        $nextTier   = $settings->nextDesignTier($designQty);
+        $designQtyInt = (int) floor($designQty);
+        $designComm   = $settings->designCommission($designQtyInt);
+        $currentPct   = $settings->designBonusPercent($designQtyInt);
+        $nextTier     = $settings->nextDesignTier($designQtyInt);
 
         $designProgressLabel = "Current Bonus: " . number_format($currentPct, 0) . "%";
         $designProgressColor = 'primary';
         $designProgressIcon  = 'heroicon-m-paint-brush';
 
         if ($nextTier) {
-            $needed = $nextTier['min_qty'] - $designQty;
+            $needed = $nextTier['min_qty'] - $designQtyInt;
             $designProgressLabel = "{$needed} more designs to hit " . number_format((float)$nextTier['bonus_percent'], 0) . "% bonus!";
             $designProgressColor = 'warning';
         } elseif ($currentPct > 0) {
-            $designProgressLabel = "Max bonus tier (" . number_format($currentPct, 0) . "%) achieved! 🚀";
+            $designProgressLabel = "Max bonus tier (" . number_format($currentPct, 0) . "%) achieved! \ud83d\ude80";
             $designProgressColor = 'success';
         }
 
         // 2. Ads
-        $adsClients = $entries->where('type', 'ads_management')->count();
-        $adsComm    = $adsClients * $settings->adsCommissionPerClient();
+        $adsComm = $adsClientsPortion * $settings->adsCommissionPerClient();
 
         // 3. Sales
-        $salesValue = (float) $entries->where('type', 'sales')->sum('package_value');
-        $salesComm  = $settings->salesCommission($salesValue);
+        $salesComm = $settings->salesCommission($salesValuePortion);
 
         $grandTotal = $designComm + $adsComm + $salesComm;
 
@@ -73,13 +98,13 @@ class StaffCommissionWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-banknotes')
                 ->color('success'),
 
-            Stat::make('Design Progress', $designQty . ' Designs')
+            Stat::make('Design Progress', $designQtyInt . ' Designs')
                 ->description($designProgressLabel)
                 ->descriptionIcon($designProgressIcon)
                 ->color($designProgressColor),
 
             Stat::make('Ads & Sales', 'RM ' . number_format($adsComm + $salesComm, 2))
-                ->description($adsClients . ' Ads clients | RM ' . number_format($salesValue, 2) . ' Sales')
+                ->description(number_format($adsClientsPortion, 1) . ' Ads clients | RM ' . number_format($salesValuePortion, 2) . ' Sales')
                 ->descriptionIcon('heroicon-m-chart-bar')
                 ->color('info'),
         ];

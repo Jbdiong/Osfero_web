@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\Inventory\Warehouses\Warehouses;
+namespace App\Filament\Resources\Inventory;
 
 use App\Models\Warehouse;
 use Filament\Forms\Components\TextInput;

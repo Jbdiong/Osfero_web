@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Inventory\Brand\Pages;
 
-use App\Filament\Resources\Inventory\Brands\Brands\Brands\BrandResource;
+use App\Filament\Resources\Inventory\BrandResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\Auth;
