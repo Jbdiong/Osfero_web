@@ -66,20 +66,37 @@ class UsageLog extends Model
     protected $fillable = [
         'tenant_id',
         'order_item_id',
+        'todolist_id',
         'user_id',
         'qty_deducted',
         'date_delivered',
         'notes',
-        'commission_entry_id',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
         'date_delivered' => 'date',
     ];
 
-    public function commissionEntry(): BelongsTo
+    public function todolist(): BelongsTo
     {
-        return $this->belongsTo(CommissionEntry::class);
+        return $this->belongsTo(Todolist::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function commissionEntry(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(CommissionEntry::class);
     }
 
     public function tenant(): BelongsTo

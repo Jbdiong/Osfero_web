@@ -56,7 +56,14 @@ class OrderForm
                     })
                     ->dehydrated(false)
                     ->helperText('Selecting a package will automatically populate the items below.'),
-                Forms\Components\DatePicker::make('purchase_date'),
+                Forms\Components\Grid::make(2)->schema([
+                    Forms\Components\DatePicker::make('purchase_date')
+                        ->default(now())
+                        ->required(),
+                    Forms\Components\DatePicker::make('deadline')
+                        ->label('Order Deadline')
+                        ->nullable(),
+                ]),
                 Forms\Components\TextInput::make('total_amount')
                     ->required()
                     ->numeric()
@@ -107,9 +114,13 @@ class OrderForm
                     ->schema([
                         Forms\Components\Hidden::make('tenant_id')
                             ->default(fn () => auth()->user()->last_active_tenant_id),
-                        Forms\Components\TextInput::make('service_type')
-                            ->required()
-                            ->maxLength(255),
+                        Forms\Components\Select::make('service_type')
+                            ->options([
+                                'Design' => '🎨 Design',
+                                'Video' => '🎬 Video',
+                                'Ads Management' => '📢 Ads Management',
+                            ])
+                            ->required(),
                         Forms\Components\TextInput::make('total_qty_purchased')
                             ->label('Total Qty Purchased')
                             ->required()

@@ -23,6 +23,9 @@ class Todolist extends Model
         'status_id',
         'position',
         'tenant_id',
+        'order_item_id',
+        'quantity',
+        'assigned_type',
     ];
 
     protected $casts = [
@@ -68,6 +71,11 @@ class Todolist extends Model
     public function todolistPICs(): HasMany
     {
         return $this->hasMany(TodolistPIC::class);
+    }
+
+    public function orderItem(): BelongsTo
+    {
+        return $this->belongsTo(OrderItem::class);
     }
 
     public function pics(): \Illuminate\Database\Eloquent\Relations\BelongsToMany

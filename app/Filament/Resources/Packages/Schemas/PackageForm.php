@@ -22,9 +22,13 @@ class PackageForm
                     ->schema([
                         Forms\Components\Hidden::make('tenant_id')
                             ->default(fn () => auth()->user()->last_active_tenant_id),
-                        Forms\Components\TextInput::make('service_type')
-                            ->required()
-                            ->maxLength(255),
+                        Forms\Components\Select::make('service_type')
+                            ->options([
+                                'Design' => '🎨 Design',
+                                'Video' => '🎬 Video',
+                                'Ads Management' => '📢 Ads Management',
+                            ])
+                            ->required(),
                         Forms\Components\TextInput::make('default_qty')
                             ->label('Default Qty')
                             ->required()

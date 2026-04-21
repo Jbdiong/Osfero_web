@@ -15,6 +15,7 @@ class Order extends Model
         'tenant_id',
         'customer_id',
         'purchase_date',
+        'deadline',
         'total_amount',
         'invoice_no',
         'invoice_file',
@@ -22,6 +23,7 @@ class Order extends Model
 
     protected $casts = [
         'purchase_date' => 'date',
+        'deadline' => 'date',
     ];
 
     public function tenant(): BelongsTo

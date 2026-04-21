@@ -22,6 +22,7 @@ class CommissionEntry extends Model
         'entry_date',
         'year',
         'month',
+        'usage_log_id',
         'name',
         'quantity',
         'package_value',
@@ -93,6 +94,11 @@ class CommissionEntry extends Model
         return $this->belongsToMany(User::class, 'commission_pics', 'commission_entry_id', 'user_id')
                     ->withPivot(['split_percentage', 'tenant_id'])
                     ->withTimestamps();
+    }
+
+    public function usageLog(): BelongsTo
+    {
+        return $this->belongsTo(UsageLog::class);
     }
 
     public function customer(): BelongsTo

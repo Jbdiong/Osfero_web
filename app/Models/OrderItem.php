@@ -44,4 +44,9 @@ class OrderItem extends Model
     {
         return $this->hasMany(UsageLog::class);
     }
+
+    public function todolists(): HasMany
+    {
+        return $this->hasMany(Todolist::class);
+    }
 }
