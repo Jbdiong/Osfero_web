@@ -45,4 +45,9 @@ class Order extends Model
     {
         return $this->hasManyThrough(UsageLog::class, OrderItem::class);
     }
+
+    public function progressTracks(): HasMany
+    {
+        return $this->hasMany(OrderProgressTrack::class);
+    }
 }

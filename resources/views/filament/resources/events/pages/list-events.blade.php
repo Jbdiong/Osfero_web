@@ -485,65 +485,116 @@
                 x-transition:leave="ease-in duration-150"
                 x-transition:leave-start="opacity-100 scale-100"
                 x-transition:leave-end="opacity-0 scale-95"
-                class="fixed z-[105] bg-white dark:bg-gray-800 rounded-lg text-left shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-200 dark:border-gray-700 transform transition-all sm:max-w-[450px] w-full"
+                class="fixed z-[105] bg-white dark:bg-gray-800 rounded-2xl text-left shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-200 dark:border-gray-700 transform transition-all sm:max-w-[448px] w-full overflow-hidden"
                 :style="`top: ${eventModalPosition.top}px; left: ${eventModalPosition.left}px;`"
             >
-                    <!-- Header Actions -->
-                    <div class="absolute top-0 right-0 pt-4 pr-4 flex gap-2">
-                        <button @click="closeEventModal" type="button" class="bg-transparent rounded-md text-gray-400 hover:text-gray-500 focus:outline-none">
-                            <span class="sr-only">Close</span>
-                           <x-heroicon-o-x-mark class="h-5 w-5" />
+                <!-- Top Control Bar -->
+                <div class="flex items-center justify-between p-2">
+                    <div class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-grab active:cursor-grabbing">
+                         <x-heroicon-o-bars-2 class="h-5 w-5" />
+                    </div>
+                    <button @click="closeEventModal" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                        <x-heroicon-o-x-mark class="h-5 w-5" />
+                    </button>
+                </div>
+
+                <div class="px-6 py-2">
+                    <!-- Title Input -->
+                    <div class="mb-4 relative group">
+                        <input 
+                            type="text" 
+                            x-model="eventForm.title" 
+                            id="event-title-input" 
+                            class="w-full !border-0 !border-b-2 !border-transparent focus:!ring-0 focus:!border-b-blue-600 bg-transparent focus:outline-none text-2xl font-normal dark:text-white pb-1 placeholder:text-gray-400 transition-colors" 
+                            placeholder="Add title"
+                        >
+                        <div class="absolute bottom-0 left-0 w-full h-0.5 bg-gray-100 group-focus-within:hidden -z-10"></div>
+                    </div>
+
+                    <!-- Tabs -->
+                    <div class="flex items-center gap-2 mb-6">
+                        <button class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-4 py-1.5 rounded-lg text-sm font-medium">Event</button>
+                        <button class="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 px-4 py-1.5 rounded-lg text-sm font-medium">Task</button>
+                        <button class="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap">
+                            Appointment schedule
+                            <span class="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full uppercase font-bold">New</span>
                         </button>
                     </div>
 
-                    <div class="bg-white border-2 border-[#000000] dark:bg-gray-800 px-6 pt-8 pb-4 sm:p-6 sm:pb-4 rounded-lg">
-                        <div class="mt-3 text-left w-full">
-                            
-                            <!-- Title Input -->
-                            <div class="mb-4">
-                                <input type="text" x-model="eventForm.title" id="event-title-input" class="w-full border-1 border-b-1 border-blue-600 bg-red-600 focus:outline-none text-xl font-medium bg-transparent placeholder:text-gray-400 dark:text-white pb-1" placeholder="Add title">
+                    <!-- Icon Rows -->
+                    <div class="space-y-6 mb-8">
+                        <!-- DateTime -->
+                        <div class="flex items-start gap-4">
+                            <div class="w-6 flex justify-center text-gray-500 mt-1">
+                                <x-heroicon-o-clock class="w-5 h-5" stroke-width="1.5" />
                             </div>
-
-                            <!-- DateTime Display -->
-                            <div class="flex items-start gap-4 mb-4">
-                                <x-heroicon-o-clock class="w-5 h-5 text-gray-500 mt-0.5" />
-                                <div class="flex-1">
-                                    <div class="text-sm text-gray-800 dark:text-gray-200" x-text="formatEventDateTimeDisplay()"></div>
-                                    <div class="text-xs text-gray-500 mt-0.5">Does not repeat</div>
-                                </div>
+                            <div class="flex-1">
+                                <div class="text-sm text-gray-800 dark:text-gray-200" x-text="formatEventDateTimeDisplay()"></div>
+                                <div class="text-xs text-gray-500 mt-0.5">Time zone · Does not repeat</div>
                             </div>
+                        </div>
 
-                            <!-- Customer Select -->
-                            <div class="flex items-center gap-4 mb-4">
-                                <x-heroicon-o-user-circle class="w-5 h-5 text-gray-500 flex-shrink-0" />
-                                <select x-model="eventForm.customer_id" class="flex-1 border-0 border-b rounde border-gray-200 dark:border-gray-600 focus:outline-none bg-transparent text-sm text-gray-700 dark:text-white py-1">
-                                    <option value="">No customer</option>
+                        <!-- Customer (Guests) -->
+                        <div class="flex items-center gap-4 group">
+                            <div class="w-6 flex justify-center text-gray-500">
+                                <x-heroicon-o-users class="w-5 h-5" stroke-width="1.5" />
+                            </div>
+                            <div class="flex-1">
+                                <select x-model="eventForm.customer_id" class="w-full !border-0 p-0 focus:ring-0 bg-transparent text-sm text-gray-700 dark:text-gray-300 placeholder:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded px-1 -mx-1 transition-colors">
+                                    <option value="">No customer (Add guests)</option>
                                     <template x-for="c in customers" :key="c.id">
                                         <option :value="c.id" x-text="c.label"></option>
                                     </template>
                                 </select>
                             </div>
-
-                            <!-- Description -->
-                            <div class="flex items-start gap-4 mb-4">
-                                <x-heroicon-o-bars-3-bottom-left class="w-5 h-5 text-gray-500 mt-0.5" />
-                                <textarea x-model="eventForm.description" rows="2" class="flex-1 border-0 border-b border-gray-200 dark:border-gray-600 focus:outline-none bg-transparent text-sm dark:text-white resize-none placeholder:text-gray-400 py-1" placeholder="Add description"></textarea>
-                            </div>
-
-                            <!-- Error Message -->
-                            <div x-show="eventForm.error" x-cloak class="text-red-500 text-xs mt-1" x-text="eventForm.error"></div>
-
                         </div>
-                    </div>
-                    
-                    <div class="bg-white dark:bg-gray-800 px-4 pt-2 pb-6 sm:px-6 flex justify-between items-center rounded-b-lg">
-                        <div class="text-xs text-gray-400" x-show="eventForm.saving">Saving...</div>
-                        <div x-show="!eventForm.saving"></div>
-                        <button @click="saveEvent" :disabled="eventForm.saving" type="button" class="inline-flex justify-center rounded-full shadow-sm px-6 py-2 bg-red-600 text-sm font-medium text-black hover:bg-amber-500 focus:outline-none transition disabled:opacity-50">
-                            Save
-                        </button>
+
+                         <!-- Placeholder Meet Row -->
+                         <div class="flex items-center gap-4 group cursor-pointer">
+                            <div class="w-6 flex justify-center text-blue-600">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                            </div>
+                            <div class="flex-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded px-1 -mx-1 transition-colors">
+                                Add Google Meet video conferencing
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="flex items-start gap-4">
+                            <div class="w-6 flex justify-center text-gray-500 mt-1">
+                                <x-heroicon-o-bars-3-bottom-left class="w-5 h-5" stroke-width="1.5" />
+                            </div>
+                            <textarea 
+                                x-model="eventForm.description" 
+                                rows="1" 
+                                @input="$el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'"
+                                class="flex-1 !border-0 p-0 focus:ring-0 bg-transparent text-sm text-gray-700 dark:text-white resize-none placeholder:text-gray-400" 
+                                placeholder="Add description"
+                            ></textarea>
+                        </div>
+                        
+                         <!-- Error Message -->
+                         <div x-show="eventForm.error" x-cloak class="ml-10 text-red-500 text-xs" x-text="eventForm.error"></div>
                     </div>
                 </div>
+
+                <!-- Footer Actions -->
+                <div class="px-6 py-4 flex justify-between items-center bg-transparent">
+                     <button class="text-sm font-medium text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 px-3 py-2 rounded-md transition-colors">More options</button>
+                     <div class="flex items-center gap-4">
+                        <div class="text-xs text-gray-400" x-show="eventForm.saving">Saving...</div>
+                        <button 
+                            @click="saveEvent" 
+                            :disabled="eventForm.saving" 
+                            type="button" 
+                            class="inline-flex justify-center rounded-full !px-4 py-2 !bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none shadow-sm transition-all active:scale-[0.98] disabled:opacity-50"
+                        >
+                            Save
+                        </button>
+                     </div>
+                </div>
+            </div>
+        </div>
             </div>
         </div>
 

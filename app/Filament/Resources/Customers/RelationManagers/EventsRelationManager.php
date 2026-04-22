@@ -24,11 +24,14 @@ class EventsRelationManager extends RelationManager
                 Forms\Components\DateTimePicker::make('end_time')
                     ->required(),
                 Forms\Components\Select::make('status_id')
-                    ->relationship('status', 'name')
+                    ->relationship('status', 'name', fn ($query) => $query->whereHas('parent', fn ($q) => $q->where('name', 'Event Status'))->orderBy('id'))
+                    ->default(request()->query('status_id'))
                     ->required(),
                 Forms\Components\Textarea::make('description')
                     ->maxLength(65535)
                     ->columnSpanFull(),
+                Forms\Components\Hidden::make('tenant_id')
+                ->default(fn () => auth()->user()->last_active_tenant_id),
             ]);
     }
 

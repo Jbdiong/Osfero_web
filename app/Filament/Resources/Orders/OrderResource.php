@@ -34,6 +34,7 @@ class OrderResource extends Resource
         return [
             RelationManagers\ItemsRelationManager::class,
             RelationManagers\UsageLogsRelationManager::class,
+            RelationManagers\ProgressTracksRelationManager::class,
         ];
     }
     public static function getPages(): array

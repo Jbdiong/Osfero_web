@@ -46,6 +46,7 @@ class RenewalsTable
             ->actions([
                 Tables\Actions\Action::make('renew')
                     ->label('Renew')
+                    ->modalHeading(fn (Renewal $record) => "Renew for {$record->label}")
                     ->icon('heroicon-o-arrow-path')
                     ->color('success')
                     ->form([
@@ -103,8 +104,8 @@ class RenewalsTable
                         ]);
                     })
                     ->fillForm(fn (Renewal $record): array => [
-                        'start_date' => $record->start_date,
-                        'Renew_Date' => $record->Renew_Date,
+                        'start_date' => $record->Renew_Date ? \Carbon\Carbon::parse($record->Renew_Date)->addDay()->format('Y-m-d') : null,
+                        'Renew_Date' => null,
                         'status_id' => $record->status_id,
                     ]),
                 Tables\Actions\EditAction::make(),

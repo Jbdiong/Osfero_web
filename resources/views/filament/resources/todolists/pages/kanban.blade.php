@@ -112,7 +112,7 @@
                                     class="cursor-pointer bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition hover:ring-2 hover:ring-blue-500"
                                     x-on:click="$wire.openTask({{ $todo->id }})"
                                 >
-                                    <div class="flex items-start justify-between mb-2">
+                                    <div class="flex items-center justify-between">
                                         <div class="flex items-center gap-2">
                                             <!-- Drag Handle -->
                                             <div class="drag-handle cursor-grab text-gray-400 hover:text-gray-600">
@@ -161,6 +161,16 @@
                                             </span>
                                         @endif
                                     </div>
+
+                                    @if($todo->end_date && $status->name !== 'Completed')
+                                        <div class="text-right mb-2">
+                                            <div class="text-[10px] text-gray-500 dark:text-gray-500 font-normal">
+                                                {{ $todo->end_date->format('d M Y') }}
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="mb-2"></div>
+                                    @endif
                                     <h4 class="font-medium text-gray-900 dark:text-white mb-1">{{ $todo->Title }}</h4>
                                     <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{{ $todo->Description }}</p>
                                     

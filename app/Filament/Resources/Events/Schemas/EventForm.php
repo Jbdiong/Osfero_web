@@ -27,8 +27,9 @@ class EventForm
                 DateTimePicker::make('end_time')
                     ->required(),
                 Select::make('status_id')
-                    ->relationship('status', 'name')
-                    ->default(null),
+                    ->relationship('status', 'name', fn ($query) => $query->whereHas('parent', fn ($q) => $q->where('name', 'Event Status'))->orderBy('id'))
+                    ->default(request()->query('status_id'))
+                    ->required(),
                 Select::make('tenant_id')
                     ->relationship('tenant', 'name')
                     ->required(),
