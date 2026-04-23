@@ -13,7 +13,11 @@
                             {{ $data['user']->name }}
                         </h3>
                         <span class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs px-2 py-0.5 rounded-full">
-                            {{ count($data['leads']) + count($data['todolists']) }}
+                            @if($activeTab === 'tasks')
+                                {{ count($data['todolists']) }}
+                            @else
+                                {{ count($data['customers']) }}
+                            @endif
                         </span>
                     </div>
                 </div>
@@ -21,26 +25,8 @@
                 <!-- Content Area -->
                 <div class="flex-1 overflow-y-auto space-y-3 px-1 custom-scrollbar">
                     
-                    <!-- Leads Section -->
-                    @if(count($data['leads']) > 0)
-                        <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-1 px-1">Leads</div>
-                        @foreach($data['leads'] as $lead)
-                            <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer hover:ring-2 hover:ring-blue-500 transition">
-                                <h4 class="font-medium text-gray-900 dark:text-white text-sm mb-1 line-clamp-2">
-                                    {{ $lead->Shop_Name }}
-                                </h4>
-                                <div class="flex flex-wrap gap-1 mt-2">
-                                    @if($lead->status)
-                                        <span class="px-2 py-0.5 text-[10px] rounded-md bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                                            {{ $lead->status->name }}
-                                        </span>
-                                    @endif
-                                </div>
-                            </div>
-                        @endforeach
-                    @endif
-
-                    <!-- Todolists Section -->
+                    <!-- Tasks Section -->
+                    @if($activeTab === 'tasks')
                     @if(count($data['todolists']) > 0)
                         <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-3 px-1">Tasks</div>
                         @foreach($data['todolists'] as $todo)
@@ -75,7 +61,26 @@
                         @endforeach
                     @endif
 
-                    @if(count($data['leads']) == 0 && count($data['todolists']) == 0)
+                    @endif
+
+                    <!-- Customers Section -->
+                    @if($activeTab === 'customers')
+                        @if(count($data['customers']) > 0)
+                            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-1 px-1">Customers</div>
+                            @foreach($data['customers'] as $customer)
+                                <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer hover:ring-2 hover:ring-blue-500 transition">
+                                    <h4 class="font-medium text-gray-900 dark:text-white text-sm mb-1 line-clamp-2">
+                                        {{ $customer->name }}
+                                    </h4>
+                                    @if($customer->company)
+                                        <p class="text-xs text-gray-500 line-clamp-1 mb-1">{{ $customer->company }}</p>
+                                    @endif
+                                </div>
+                            @endforeach
+                        @endif
+                    @endif
+
+                    @if(($activeTab === 'tasks' && count($data['todolists']) == 0) || ($activeTab === 'customers' && count($data['customers']) == 0))
                         <div class="text-center py-8 text-gray-400 text-sm">
                             No items
                         </div>

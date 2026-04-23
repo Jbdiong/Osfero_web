@@ -57,7 +57,7 @@ class TodolistController extends Controller
                     'pics' => $todo->todolistPICs->map(function ($pic) { // Changed pics to todolistPICs
                         return [
                             'id' => $pic->id,
-                            'todolist_id' => $pic->todolist_id,
+                            'todolist_id' => $pic->picable_id,
                             'user_id' => $pic->user_id,
                             'tenant_id' => $pic->tenant_id,
                             'user' => $pic->user ? ['name' => $pic->user->name] : null,
@@ -101,8 +101,9 @@ class TodolistController extends Controller
             // Handle PICs
             if (!empty($validated['pics'])) {
                 foreach ($validated['pics'] as $userId) {
-                    \App\Models\TodolistPIC::create([
-                        'todolist_id' => $todo->id,
+                    \App\Models\Picable::create([
+                        'picable_type' => \App\Models\Todolist::class,
+                        'picable_id' => $todo->id,
                         'user_id' => $userId,
                         'tenant_id' => $user->tenant_id,
                     ]);
@@ -170,11 +171,12 @@ class TodolistController extends Controller
             // Sync PICs
             if (isset($validated['pics'])) {
                 // Delete existing
-                \App\Models\TodolistPIC::where('todolist_id', $todo->id)->delete();
+                \App\Models\Picable::where('picable_type', \App\Models\Todolist::class)->where('picable_id', $todo->id)->delete();
                 // Add new
                 foreach ($validated['pics'] as $userId) {
-                    \App\Models\TodolistPIC::create([
-                        'todolist_id' => $todo->id,
+                    \App\Models\Picable::create([
+                        'picable_type' => \App\Models\Todolist::class,
+                        'picable_id' => $todo->id,
                         'user_id' => $userId,
                         'tenant_id' => $user->tenant_id,
                     ]);

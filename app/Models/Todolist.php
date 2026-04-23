@@ -146,9 +146,9 @@ class Todolist extends Model
         return $this->hasMany(Todolist::class, 'parent_id');
     }
 
-    public function todolistPICs(): HasMany
+    public function todolistPICs(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
-        return $this->hasMany(TodolistPIC::class);
+        return $this->morphMany(Picable::class, 'picable');
     }
 
     public function orderItem(): BelongsTo
@@ -156,9 +156,9 @@ class Todolist extends Model
         return $this->belongsTo(OrderItem::class);
     }
 
-    public function pics(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function pics(): \Illuminate\Database\Eloquent\Relations\MorphToMany
     {
-        return $this->belongsToMany(User::class, 'todolist_p_i_c_s', 'todolist_id', 'user_id')
+        return $this->morphToMany(User::class, 'picable', 'picables', 'picable_id', 'user_id')
             ->withPivot('tenant_id');
     }
 }

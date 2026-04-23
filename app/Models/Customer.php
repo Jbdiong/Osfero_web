@@ -42,4 +42,15 @@ class Customer extends Model
     {
         return $this->hasMany(Renewal::class);
     }
+
+    public function pics(): \Illuminate\Database\Eloquent\Relations\MorphToMany
+    {
+        return $this->morphToMany(\App\Models\User::class, 'picable', 'picables', 'picable_id', 'user_id')
+            ->withPivot('tenant_id');
+    }
+
+    public function phones(): HasMany
+    {
+        return $this->hasMany(Phone::class);
+    }
 }

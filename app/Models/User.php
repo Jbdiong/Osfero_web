@@ -113,19 +113,24 @@ class User extends Authenticatable implements FilamentUser, HasTenants, HasName
         return null;
     }
 
+    public function pics()
+    {
+        return $this->hasMany(Picable::class);
+    }
+
     public function leadPICs()
     {
-        return $this->hasMany(LeadPIC::class);
+        return $this->hasMany(Picable::class)->where('picable_type', Lead::class);
     }
 
     public function eventPICs()
     {
-        return $this->hasMany(EventPIC::class);
+        return $this->hasMany(Picable::class)->where('picable_type', Event::class);
     }
 
     public function todolistPICs()
     {
-        return $this->hasMany(TodolistPIC::class);
+        return $this->hasMany(Picable::class)->where('picable_type', Todolist::class);
     }
 
     public function commissionEntries()

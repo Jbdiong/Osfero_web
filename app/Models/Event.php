@@ -42,9 +42,9 @@ class Event extends Model
         return $this->belongsTo(Lookup::class, 'status_id');
     }
 
-    public function eventPICs(): HasMany
+    public function eventPICs(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
-        return $this->hasMany(EventPIC::class);
+        return $this->morphMany(Picable::class, 'picable');
     }
 
     public function customer(): BelongsTo

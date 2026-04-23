@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lead;
-use App\Models\LeadPIC;
 use App\Models\Phone;
 use App\Models\City;
 use App\Models\State;
@@ -262,8 +261,9 @@ class LeadController extends Controller
         // Handle marketer association via LeadPIC
         $marketerId = $request->marketer_id ?? $request->Marketer;
         if ($marketerId) {
-            LeadPIC::create([
-                'lead_id' => $lead->id,
+            \App\Models\Picable::create([
+                'picable_type' => \App\Models\Lead::class,
+                'picable_id' => $lead->id,
                 'user_id' => $marketerId,
                 'tenant_id' => $tenantId,
             ]);
@@ -369,8 +369,8 @@ class LeadController extends Controller
         // Update or create marketer via LeadPIC
         $marketerId = $request->marketer_id ?? $request->Marketer;
         if ($marketerId) {
-            LeadPIC::updateOrCreate(
-                ['lead_id' => $lead->id],
+            \App\Models\Picable::updateOrCreate(
+                ['picable_type' => \App\Models\Lead::class, 'picable_id' => $lead->id],
                 ['user_id' => $marketerId, 'tenant_id' => $tenantId]
             );
         }

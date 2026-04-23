@@ -74,20 +74,20 @@ class Lead extends Model
         return $this->hasMany(Renewal::class);
     }
 
-    public function leadPICs(): HasMany
+    public function leadPICs(): \Illuminate\Database\Eloquent\Relations\MorphMany
     {
-        return $this->hasMany(LeadPIC::class);
+        return $this->morphMany(Picable::class, 'picable');
     }
 
     public function marketer(): HasOneThrough
     {
         return $this->hasOneThrough(
             User::class,
-            LeadPIC::class,
-            'lead_id', // Foreign key on lead_p_i_c_s table
+            Picable::class,
+            'picable_id', // Foreign key on picables table
             'id',      // Foreign key on users table
             'id',      // Local key on leads table
-            'user_id'  // Local key on lead_p_i_c_s table
-        );
+            'user_id'  // Local key on picables table
+        )->where('picables.picable_type', self::class);
     }
 }

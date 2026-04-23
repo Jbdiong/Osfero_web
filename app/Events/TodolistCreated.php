@@ -54,7 +54,7 @@ class TodolistCreated implements ShouldBroadcast
             'pics' => $todo->todolistPICs->map(function ($pic) {
                 return [
                     'id' => $pic->id,
-                    'todolist_id' => $pic->todolist_id,
+                    'todolist_id' => $pic->picable_id,
                     'user_id' => $pic->user_id,
                     'tenant_id' => $pic->tenant_id,
                     'user' => $pic->user ? ['name' => $pic->user->name] : null,

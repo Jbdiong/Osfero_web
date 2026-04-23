@@ -116,14 +116,24 @@ class Tenant extends Model
         return $this->hasMany(Lookup::class);
     }
 
+    public function pics(): HasMany
+    {
+        return $this->hasMany(Picable::class);
+    }
+
     public function eventPICs(): HasMany
     {
-        return $this->hasMany(EventPIC::class);
+        return $this->hasMany(Picable::class)->where('picable_type', Event::class);
     }
 
     public function todolistPICs(): HasMany
     {
-        return $this->hasMany(TodolistPIC::class);
+        return $this->hasMany(Picable::class)->where('picable_type', Todolist::class);
+    }
+
+    public function leadPICs(): HasMany
+    {
+        return $this->hasMany(Picable::class)->where('picable_type', Lead::class);
     }
 
     public function hiddenTenantLookups(): HasMany

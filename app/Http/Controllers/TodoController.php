@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Todolist;
-use App\Models\TodolistPIC;
 use App\Models\Lead;
 use App\Models\Payment;
 use App\Models\Lookup;
@@ -212,8 +211,9 @@ class TodoController extends Controller
 
         // Create PICs
         foreach ($picUserIds as $userId) {
-            TodolistPIC::create([
-                'todolist_id' => $todolist->id,
+            \App\Models\Picable::create([
+                'picable_type' => \App\Models\Todolist::class,
+                'picable_id' => $todolist->id,
                 'user_id' => $userId,
                 'tenant_id' => $tenantId,
             ]);
@@ -271,12 +271,13 @@ class TodoController extends Controller
         if ($picUserIds !== null) {
             Log::info('Updating Todolist PICs', ['todolist_id' => $todolist->id, 'pic_user_ids' => $picUserIds]);
             // Delete existing PICs
-            TodolistPIC::where('todolist_id', $todolist->id)->delete();
+            \App\Models\Picable::where('picable_type', \App\Models\Todolist::class)->where('picable_id', $todolist->id)->delete();
 
             // Create new PICs
             foreach ($picUserIds as $userId) {
-                TodolistPIC::create([
-                    'todolist_id' => $todolist->id,
+                \App\Models\Picable::create([
+                    'picable_type' => \App\Models\Todolist::class,
+                    'picable_id' => $todolist->id,
                     'user_id' => $userId,
                     'tenant_id' => $tenantId,
                 ]);

@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Lead;
 use App\Models\Todolist;
 use App\Models\Lookup;
+use App\Models\Customer;
 use Illuminate\Support\Facades\Auth;
 
 class Tracking extends Page
@@ -20,6 +21,20 @@ class Tracking extends Page
     protected static string $view = 'filament.pages.tracking';
 
     public $columns = [];
+    public $activeTab = 'tasks';
+
+    public function getHeading(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        return new \Illuminate\Support\HtmlString('
+            <div class="flex items-center gap-4">
+                <span>Tracking</span>
+                <select wire:model.live="activeTab" class="text-sm font-normal rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 py-1.5 pl-3 pr-8 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="tasks">Todolist</option>
+                    <option value="customers">Customers</option>
+                </select>
+            </div>
+        ');
+    }
 
     public function mount()
     {
@@ -41,23 +56,11 @@ class Tracking extends Page
         foreach ($users as $userItem) {
             $itemsByUser[$userItem->id] = [
                 'user' => $userItem,
-                'leads' => [],
-                'todolists' => []
+                'todolists' => [],
+                'customers' => [],
             ];
         }
 
-        // Fetch Leads
-        $leads = Lead::where('tenant_id', $tenantId)
-            ->with(['leadPICs', 'status'])
-            ->get();
-
-        foreach ($leads as $lead) {
-            foreach ($lead->leadPICs as $pic) {
-                if (isset($itemsByUser[$pic->user_id])) {
-                    $itemsByUser[$pic->user_id]['leads'][] = $lead;
-                }
-            }
-        }
 
         // Fetch Todolists
         // Get "Completed" status ID to filter out
@@ -86,6 +89,19 @@ class Tracking extends Page
             foreach ($todo->todolistPICs as $pic) {
                 if (isset($itemsByUser[$pic->user_id])) {
                     $itemsByUser[$pic->user_id]['todolists'][] = $todo;
+                }
+            }
+        }
+
+        // Fetch Customers
+        $customers = Customer::where('tenant_id', $tenantId)
+            ->with(['pics'])
+            ->get();
+
+        foreach ($customers as $customer) {
+            foreach ($customer->pics as $picUser) {
+                if (isset($itemsByUser[$picUser->id])) {
+                    $itemsByUser[$picUser->id]['customers'][] = $customer;
                 }
             }
         }
