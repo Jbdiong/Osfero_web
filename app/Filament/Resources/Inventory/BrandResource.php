@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Inventory;
 
+use App\Filament\Clusters\Inventory;
 use App\Models\Brand;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
@@ -14,8 +15,8 @@ use Illuminate\Support\Facades\Auth;
 class BrandResource extends Resource
 {
     protected static ?string $model = Brand::class;
+    protected static ?string $cluster = Inventory::class;
     protected static ?string $navigationIcon = 'heroicon-o-tag';
-    protected static ?string $navigationGroup = 'Inventory';
     protected static ?int $navigationSort = 2;
 
     public static function getEloquentQuery(): Builder

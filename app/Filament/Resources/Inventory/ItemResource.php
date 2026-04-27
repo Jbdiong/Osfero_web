@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Inventory;
 
+use App\Filament\Clusters\Inventory;
 use App\Filament\Resources\Inventory\Pages;
 use App\Filament\Resources\Inventory\Schemas\ItemForm;
 use App\Filament\Resources\Inventory\Tables\ItemTable;
@@ -16,9 +17,9 @@ class ItemResource extends Resource
 {
     protected static ?string $model = Item::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-archive-box';
+    protected static ?string $cluster = Inventory::class;
 
-    protected static ?string $navigationGroup = 'Inventory';
+    protected static ?string $navigationIcon = 'heroicon-o-archive-box';
 
     protected static ?int $navigationSort = 1;
 

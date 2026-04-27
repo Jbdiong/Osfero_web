@@ -489,10 +489,7 @@
                 :style="`top: ${eventModalPosition.top}px; left: ${eventModalPosition.left}px;`"
             >
                 <!-- Top Control Bar -->
-                <div class="flex items-center justify-between p-2">
-                    <div class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-grab active:cursor-grabbing">
-                         <x-heroicon-o-bars-2 class="h-5 w-5" />
-                    </div>
+                <div class="flex items-center justify-end p-2">
                     <button @click="closeEventModal" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                         <x-heroicon-o-x-mark class="h-5 w-5" />
                     </button>
@@ -514,11 +511,7 @@
                     <!-- Tabs -->
                     <div class="flex items-center gap-2 mb-6">
                         <button class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-4 py-1.5 rounded-lg text-sm font-medium">Event</button>
-                        <button class="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 px-4 py-1.5 rounded-lg text-sm font-medium">Task</button>
-                        <button class="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap">
-                            Appointment schedule
-                            <span class="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full uppercase font-bold">New</span>
-                        </button>
+                        
                     </div>
 
                     <!-- Icon Rows -->

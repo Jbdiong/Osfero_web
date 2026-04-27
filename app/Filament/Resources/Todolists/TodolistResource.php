@@ -193,7 +193,7 @@ class TodolistResource extends Resource
         return $query;
     }
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
     protected static ?string $recordTitleAttribute = 'Title';
 

@@ -18,10 +18,20 @@ class TenantResource extends Resource
 {
     protected static ?string $model = Tenant::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-key';
+
+    protected static ?string $navigationLabel = 'Generate Code';
+    protected static ?string $pluralModelLabel = 'Generate Code';
+    protected static ?string $modelLabel = 'Generate Code';
 
     // Prevent Filament from trying to scope Tenants by themselves
     protected static bool $isScopedToTenant = false;
+
+    public static function canViewAny(): bool
+    {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        return $user && in_array(optional($user->role)->role, ['Superadmin', 'Tenant admin', 'Manager']);
+    }
 
     public static function getEloquentQuery(): Builder
     {

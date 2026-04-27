@@ -18,6 +18,14 @@ class CustomersTable
                     ->searchable(),
                 Tables\Columns\TextColumn::make('company')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('pics')
+                    ->label('Staff / PICs')
+                    ->getStateUsing(fn (\App\Models\Customer $record) => $record->pics->pluck('name'))
+                    ->badge()
+                    ->color('gray')
+                    ->searchable(query: function ($query, string $search) {
+                        return $query->whereHas('pics', fn($q) => $q->where('users.name', 'like', "%{$search}%"));
+                    }),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
