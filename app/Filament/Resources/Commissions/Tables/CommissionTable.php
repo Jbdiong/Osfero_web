@@ -4,8 +4,10 @@ namespace App\Filament\Resources\Commissions\Tables;
 
 use App\Filament\Resources\Commissions\CommissionResource;
 use App\Models\CommissionEntry;
+use App\Models\User;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
 class CommissionTable
@@ -98,6 +100,7 @@ class CommissionTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->modifyQueryUsing(fn (Builder $query) => $query->orderBy('is_approved', 'asc'))
             ->defaultSort('created_at', 'desc')
             ->groups([
                 Tables\Grouping\Group::make('month')
@@ -107,14 +110,6 @@ class CommissionTable
                     ),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('type')
-                    ->label('Type')
-                    ->options([
-                        'design'         => 'Design',
-                        'video'          => 'Video',
-                        'ads_management' => 'Ads Management',
-                        'sales'          => 'Sales',
-                    ]),
 
                 Tables\Filters\SelectFilter::make('month')
                     ->options([
@@ -130,11 +125,24 @@ class CommissionTable
                         range(now()->year - 2, now()->year + 1)
                     )),
 
-                Tables\Filters\TernaryFilter::make('is_approved')
-                    ->label('Approval Status')
-                    ->placeholder('All')
-                    ->trueLabel('Approved Only')
-                    ->falseLabel('Pending Only'),
+
+                Tables\Filters\SelectFilter::make('staff')
+                    ->label('Staff / PIC')
+                    ->searchable()
+                    ->options(fn () => \Filament\Facades\Filament::getTenant() 
+                        ? \Filament\Facades\Filament::getTenant()->users->pluck('name', 'id') 
+                        : User::pluck('name', 'id')
+                    )
+                    ->query(function (Builder $query, array $data) {
+                        if (empty($data['value'])) {
+                            return $query;
+                        }
+
+                        return $query->where(function ($q) use ($data) {
+                            $q->whereHas('users', fn($inner) => $inner->where('users.id', $data['value']))
+                              ->orWhere('user_id', $data['value']);
+                        });
+                    }),
             ])
             ->actions([
                 Tables\Actions\Action::make('approve')
@@ -152,7 +160,7 @@ class CommissionTable
                 Tables\Actions\Action::make('unapprove')
                     ->label('Recall')
                     ->icon('heroicon-o-x-circle')
-                    ->color('danger')
+                    ->color('warning')
                     ->visible(fn (CommissionEntry $r) => ! CommissionResource::isStaffOnly() && $r->is_approved)
                     ->action(fn (CommissionEntry $r) => $r->update([
                         'is_approved' => false,

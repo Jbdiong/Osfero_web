@@ -38,10 +38,10 @@
             </div>
         @endif
 
-        <div class="flex gap-4 min-w-full h-full">
+        <div class="grid grid-cols-5 gap-4 h-full">
             @foreach ($statuses as $status)
                 <div 
-                    class="kanban-column flex-1 min-w-[300px] bg-gray-100 dark:bg-gray-900 rounded-xl p-4 flex flex-col gap-4 transition-colors duration-200"
+                    class="kanban-column bg-gray-100 dark:bg-gray-900 rounded-xl p-4 flex flex-col gap-4 transition-colors duration-200"
                     @dragover.prevent="if (draggingId) { event.dataTransfer.dropEffect = 'move'; }"
                     @drop="
                         if (draggingId) {
@@ -64,11 +64,12 @@
                         <div class="flex items-center gap-2">
                             <div @class([
                                 'w-2 h-2 rounded-full',
+                                'bg-purple-500' => $status->name === 'Waiting List',
                                 'bg-blue-500' => $status->name === 'To do',
                                 'bg-orange-500' => $status->name === 'In Progress',
                                 'bg-pink-500' => $status->name === 'Pending',
                                 'bg-green-500' => $status->name === 'Completed',
-                                'bg-gray-500' => !in_array($status->name, ['To do', 'In Progress', 'Pending', 'Completed']),
+                                'bg-gray-500' => !in_array($status->name, ['Waiting List', 'To do', 'In Progress', 'Pending', 'Completed']),
                             ])></div>
                             <h3 class="font-semibold text-gray-900 dark:text-white">{{ $status->name }}</h3>
                             <span class="bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs px-2 py-0.5 rounded-full font-medium">

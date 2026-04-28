@@ -183,21 +183,23 @@ class LookupSeeder extends Seeder
         // ========== TODOLIST LOOKUPS ==========
         
         // Todolist Status
-        $todolistStatusParent = Lookup::create([
+        $todolistStatusParent = Lookup::firstOrCreate([
             'name' => 'Todolist Status',
+        ], [
             'label' => 'Todolist Status',
             'parent_id' => null,
-            'tenant_id' => null, // Global
+            'tenant_id' => null,
         ]);
-
-        $todolistStatuses = ['To do', 'In Progress', 'Pending', 'Completed'];
+        
+        $todolistStatuses = ['Waiting List', 'To do', 'In Progress', 'Pending', 'Completed'];
         foreach ($todolistStatuses as $status) {
-            $lookups[] = [
+            Lookup::firstOrCreate([
                 'name' => $status,
-                'label' => $status,
                 'parent_id' => $todolistStatusParent->id,
-                'tenant_id' => null, // Global
-            ];
+                'tenant_id' => null,
+            ], [
+                'label' => $status,
+            ]);
         }
 
         // ========== EVENT LOOKUPS ==========
@@ -230,7 +232,7 @@ class LookupSeeder extends Seeder
             'tenant_id' => null, // Global
         ]);
 
-        $renewalStatuses = ['Pending Renewal', 'Followed Up', 'On Going'];
+        $renewalStatuses = ['Pending Renewal', 'Followed Up', 'On Going', 'Ended'];
         foreach ($renewalStatuses as $status) {
             $lookups[] = [
                 'name' => $status,

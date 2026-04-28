@@ -26,6 +26,11 @@ class Todolist extends Model
                 ->first()?->id ?? 51;
 
             if ($todolist->isDirty('status_id') && $todolist->status_id == $completedStatus) {
+                // Only trigger if this task is linked to an order item
+                if (!$todolist->order_item_id) {
+                    return;
+                }
+
                 // If no UsageLog exists, create one and a commission
                 if (!$todolist->usageLogs()->exists()) {
                     $usageLog = \App\Models\UsageLog::create([

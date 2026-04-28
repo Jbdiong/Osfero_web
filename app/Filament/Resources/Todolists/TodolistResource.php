@@ -25,7 +25,7 @@ class TodolistResource extends Resource
             ->label('Submit Completion')
             ->icon('heroicon-m-check-circle')
             ->color('success')
-            ->hidden(fn (Todolist $record) => $record->status?->name === 'Completed')
+            ->hidden(fn (Todolist $record) => $record->status?->name === 'Completed' || !$record->order_item_id)
             ->form([
                 \Filament\Forms\Components\Grid::make(2)->schema([
                     \Filament\Forms\Components\DatePicker::make('date_delivered')

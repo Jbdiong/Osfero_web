@@ -32,6 +32,15 @@ class ListTodolists extends ListRecords
         $statusParent = \App\Models\Lookup::where('name', 'Todolist Status')->first();
         $statuses = $statusParent ? \App\Models\Lookup::where('parent_id', $statusParent->id)->get() : collect();
         
+        // Define the desired order of columns
+        $desiredOrder = ['Waiting List', 'To do', 'In Progress', 'Pending', 'Completed'];
+        
+        // Sort the statuses based on the desired order
+        $statuses = $statuses->sortBy(function ($status) use ($desiredOrder) {
+            $index = array_search($status->name, $desiredOrder);
+            return $index === false ? 999 : $index;
+        });
+        
         // 2. Base Query using the resource's Eloquent Query
         $isManager = in_array(auth()->user()?->role?->role, ['Superadmin', 'Tenant admin', 'Manager']);
         
