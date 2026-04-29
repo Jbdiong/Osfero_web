@@ -23,19 +23,27 @@ class OrdersTable
                     ->money('MYR')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('status')
-                    ->formatStateUsing(function (\App\Models\Order $record) {
-                        $total = $record->items()->sum('total_qty_purchased');
-                        $left = $record->items()->sum('qty_remaining');
+                    ->label('Status')
+                    ->html()
+                    ->getStateUsing(function (\App\Models\Order $record) {
+                        $total = (int) $record->items()->sum('total_qty_purchased');
+                        $left = (int) $record->items()->sum('qty_remaining');
                         
-                        $html = "
-                            <div class='flex flex-col gap-1'>
-                                <div class='text-xs text-gray-500 font-medium whitespace-nowrap'>Items Progression: " . ($total - $left) . " / {$total}</div>
-                                <div class='w-full bg-gray-200 rounded-full h-1 '>
-                                    <div class='bg-primary-600 h-1 rounded-full' style='width: " . ($total > 0 ? (($total - $left) / $total * 100) : 0) . "%'></div>
+                        if ($total === 0) {
+                            return '<span class="text-gray-400 text-xs italic">No items</span>';
+                        }
+
+                        $progress = ($total - $left);
+                        $percentage = ($total > 0) ? ($progress / $total * 100) : 0;
+                        
+                        return "
+                            <div class='flex flex-col gap-1' style='min-width: 150px;'>
+                                <div class='text-xs text-gray-500 font-medium whitespace-nowrap'>Items Progression: {$progress} / {$total}</div>
+                                <div class='w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700'>
+                                    <div class='bg-primary-600 h-1.5 rounded-full' style='width: {$percentage}%'></div>
                                 </div>
                             </div>
                         ";
-                        return new \Illuminate\Support\HtmlString($html);
                     }),
             ])
             ->filters([
@@ -47,6 +55,20 @@ class OrdersTable
                     ->icon('heroicon-m-plus-circle')
                     ->color('info')
                     ->form([
+                        \Filament\Forms\Components\Placeholder::make('remaining_summary')
+                            ->label('Order Items Overview')
+                            ->content(function (\App\Models\Order $record) {
+                                $items = $record->items()->where('qty_remaining', '>', 0)->get();
+                                if ($items->isEmpty()) return 'No remaining units.';
+                                
+                                $list = $items->map(fn ($item) => "
+                                    <div class='text-sm font-medium'>
+                                        • {$item->service_type} - <span class='text-primary-600 dark:text-primary-400'>{$item->qty_remaining} left</span>
+                                    </div>
+                                ")->implode('');
+
+                                return new \Illuminate\Support\HtmlString("<div class='mb-4 space-y-1'>{$list}</div>");
+                            }),
                         \Filament\Forms\Components\Select::make('order_item_id')
                             ->label('Select Item to Task')
                             ->options(function (\App\Models\Order $record) {
@@ -100,7 +122,7 @@ class OrdersTable
                         $item = \App\Models\OrderItem::find($data['order_item_id']);
                         $qty = (int) $data['qty_to_task'];
                         
-                        $statusId = \App\Models\Lookup::where('name', 'To do')->first()?->id ?? 48;
+                        $statusId = \App\Models\Lookup::where('name', 'Waiting List')->first()?->id ?? 48;
                         $priorityId = \App\Models\Lookup::where('name', 'Low')->first()?->id ?? 16;
 
                         // Determine which PICs to sync

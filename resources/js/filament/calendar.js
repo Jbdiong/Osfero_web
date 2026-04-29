@@ -16,18 +16,30 @@ axios.defaults.withCredentials = true;
 
 const filamentCalendarFactory = ({
     events = [],
+    todolists = [],
     initialDate = null,
     upcomingDeadline = null,
     overdueRenewals = [],
+    calendarRenewals = [],
     customers = [],
     tenantId = null
 }) => ({
     // --- Main Calendar State ---
     calendar: null,
+    events: [],
     fullCalendarEvents: [],
+    fullCalendarTodolists: [],
+    fullCalendarRenewals: [],
     currentView: 'dayGridMonth',
     selectedDate: null,
     currentDate: null, // For mini calendar navigation
+
+    filters: {
+        events: true,
+        todolist: true,
+        renewals: true,
+        holidays: true
+    },
 
     // --- Sidebar Data ---
     upcomingDeadline: upcomingDeadline || { title: null, more: null, countdown: null },
@@ -65,7 +77,12 @@ const filamentCalendarFactory = ({
     // --- Google Style Event Modal State ---
     showEventModal: false,
     eventModalPosition: { top: 0, left: 0 },
+    isEditing: false,
+    canDelete: false,
+    showDeleteConfirmModal: false,
+    isDeletingEvent: false,
     eventForm: {
+        id: null,
         title: '',
         type: 'event',
         start: null,
@@ -85,6 +102,36 @@ const filamentCalendarFactory = ({
         calendarName: '',
         dateStr: '',
         creator: ''
+    },
+
+    // Helpers for Date/Time pickers (converting Date objects to/from strings)
+    getPickerDate(date) {
+        if (!date) return '';
+        const d = new Date(date);
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    },
+    getPickerTime(date) {
+        if (!date) return '';
+        const d = new Date(date);
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    },
+    setPickerDate(field, val) {
+        const d = new Date(this.eventForm[field]);
+        const parts = val.split('-');
+        if (parts.length === 3) {
+            d.setFullYear(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            this.eventForm[field] = new Date(d);
+        }
+    },
+    setPickerTime(field, val) {
+        const d = new Date(this.eventForm[field]);
+        const parts = val.split(':');
+        if (parts.length === 2) {
+            d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+            this.eventForm[field] = new Date(d);
+        }
     },
 
     // =================================================================================================
@@ -141,7 +188,10 @@ const filamentCalendarFactory = ({
         this.selectedDate = initialDate ? new Date(initialDate) : new Date();
         this.currentDate = new Date(this.selectedDate);
 
-        this.processEvents(events);
+        this.events = events || [];
+        this.processEvents(this.events);
+        this.processTodolists(todolists);
+        this.processRenewals(calendarRenewals);
 
         // Delay initialization to ensure DOM is ready and styled
         setTimeout(() => {
@@ -178,19 +228,45 @@ const filamentCalendarFactory = ({
         const dateStr = eventDate.toISOString().split('T')[0];
 
         this.fullCalendarEvents = rawEvents.map(event => {
-            const colorMap = { 'purple': '#9333ea', 'blue': '#3b82f6', 'pink': '#ec4899', 'green': '#10b981' };
+            const start = new Date(event.start);
+            const end = new Date(event.end || event.start);
+            
+            let displayAllDay = !!event.allDay;
+            let isMultiDayTimed = false;
 
-            // Start and End are usually ISO strings from Laravel (YYYY-MM-DDTHH:mm:ss)
-            // We can pass them directly to FullCalendar, or normalize them if needed.
+            // Detect timed events spanning across midnight
+            if (!displayAllDay && start.toDateString() !== end.toDateString()) {
+                displayAllDay = true;
+                isMultiDayTimed = true;
+            }
+
+            // For display purposes with allDay: true, FullCalendar end date is exclusive.
+            // If it's a multi-day event, we must ensure the end date is the day AFTER the last day.
+            let displayEnd = event.end;
+            if (displayAllDay) {
+                const dEnd = new Date(end);
+                dEnd.setDate(dEnd.getDate() + 1);
+                // Use local date string YYYY-MM-DD instead of ISO (which is UTC)
+                const year = dEnd.getFullYear();
+                const month = String(dEnd.getMonth() + 1).padStart(2, '0');
+                const day = String(dEnd.getDate()).padStart(2, '0');
+                displayEnd = `${year}-${month}-${day}`;
+            }
+
             return {
                 id: event.id.toString(),
                 title: event.title,
-                start: event.start, // Pass strictly as received (ISO string)
-                end: event.end,     // Pass strictly as received (ISO string)
-                backgroundColor: '#ffd7b5', // Forced to requested orange
-                borderColor: '#ff6700', // Forced to requested border
+                start: event.start, 
+                end: displayEnd,     
+                allDay: displayAllDay,
+                backgroundColor: '#ffd7b5', 
+                borderColor: '#ff6700', 
                 textColor: '#000000',
-                extendedProps: { ...event }
+                extendedProps: { 
+                    ...event, 
+                    isMultiDayTimed: isMultiDayTimed,
+                    realEnd: event.end // Keep real end for modal
+                }
             };
         });
 
@@ -210,6 +286,107 @@ const filamentCalendarFactory = ({
         }
     },
 
+    processTodolists(rawTodolists) {
+        if (!rawTodolists) return;
+
+        this.fullCalendarTodolists = rawTodolists.map(task => ({
+            id: task.id.toString(),
+            title: task.title,
+            start: task.start,
+            end: task.end || undefined,
+            allDay: true,
+            extendedProps: { ...task, calendarType: 'todolist' }
+        }));
+
+        if (this.calendar) {
+            const existing = this.calendar.getEventSourceById('todolist-events');
+            if (existing) existing.remove();
+            this.calendar.addEventSource({
+                id: 'todolist-events',
+                events: this.fullCalendarTodolists,
+                display: 'block',
+                backgroundColor: '#dbeafe',
+                borderColor: '#3b82f6',
+                textColor: '#1e3a8a'
+            });
+        }
+    },
+
+    processRenewals(rawRenewals) {
+        if (!rawRenewals) return;
+
+        this.fullCalendarRenewals = rawRenewals.map(renewal => ({
+            id: renewal.id.toString(),
+            title: renewal.title,
+            start: renewal.start,
+            allDay: true,
+            backgroundColor: '#fee2e2',
+            borderColor: '#ef4444',
+            textColor: '#991b1b',
+            extendedProps: { ...renewal, calendarType: 'renewal' }
+        }));
+
+        if (this.calendar) {
+            const existing = this.calendar.getEventSourceById('renewal-events');
+            if (existing) existing.remove();
+            this.calendar.addEventSource({
+                id: 'renewal-events',
+                events: this.fullCalendarRenewals,
+                display: 'block',
+                backgroundColor: '#fee2e2',
+                borderColor: '#ef4444',
+                textColor: '#991b1b'
+            });
+        }
+    },
+
+    toggleSource(sourceId, isVisible) {
+        if (!this.calendar) return;
+        
+        if (!isVisible) {
+            const source = this.calendar.getEventSourceById(sourceId);
+            if (source) source.remove();
+        } else {
+            // Re-add
+            if (sourceId === 'local-events') {
+                this.calendar.addEventSource({
+                    id: 'local-events',
+                    events: this.fullCalendarEvents,
+                    display: 'block',
+                    backgroundColor: '#ffd7b5',
+                    borderColor: '#ff6700',
+                    textColor: '#000000'
+                });
+            } else if (sourceId === 'todolist-events') {
+                this.calendar.addEventSource({
+                    id: 'todolist-events',
+                    events: this.fullCalendarTodolists,
+                    display: 'block',
+                    backgroundColor: '#dbeafe',
+                    borderColor: '#3b82f6',
+                    textColor: '#1e3a8a'
+                });
+            } else if (sourceId === 'renewal-events') {
+                this.calendar.addEventSource({
+                    id: 'renewal-events',
+                    events: this.fullCalendarRenewals,
+                    display: 'block',
+                    backgroundColor: '#fee2e2',
+                    borderColor: '#ef4444',
+                    textColor: '#991b1b'
+                });
+            } else if (sourceId === 'google-holidays') {
+                this.calendar.addEventSource({
+                    id: 'google-holidays',
+                    googleCalendarId: 'en.malaysia#holiday@group.v.calendar.google.com',
+                    color: '#C6FFCA',
+                    textColor: '#000000',
+                    borderColor: '#008002'
+                });
+            }
+        }
+    },
+
     initCalendar() {
         const calendarEl = this.$refs.fullCalendar;
         if (!calendarEl) return;
@@ -221,9 +398,32 @@ const filamentCalendarFactory = ({
             initialDate: this.selectedDate,
             headerToolbar: false,
             height: '100%',
+            dayMaxEvents: true,    // auto-fit to row height; overflow becomes "+X more"
             nowIndicator: true,
             selectable: true,
             selectMirror: true,
+            eventContent: (arg) => {
+                const ev = arg.event;
+                const isMultiDayTimed = !ev.extendedProps?.all_day && ev.allDay;
+                
+                if (isMultiDayTimed) {
+                    const start = ev.start;
+                    const end = ev.extendedProps?.realEnd ? new Date(ev.extendedProps.realEnd) : ev.end;
+                    
+                    const formatTime = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                    const formatDate = (d) => `${d.getDate()}/${d.getMonth() + 1}`;
+                    
+                    const rangeStr = `${formatDate(start)} ${formatTime(start)} - ${formatDate(end)} ${formatTime(end)}`;
+                    
+                    return {
+                        html: `<div class="fc-content" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85em;">
+                                <span class="fc-time" style="font-weight: 600; margin-right: 4px;">${rangeStr}</span>
+                                <span class="fc-title">${ev.title}</span>
+                              </div>`
+                    };
+                }
+                return null; // use default
+            },
             select: (info) => {
                 let start = info.start;
                 let end = info.end;
@@ -236,17 +436,48 @@ const filamentCalendarFactory = ({
                 this.openEventModal(start, end, allDay, info.jsEvent);
             },
             eventClick: (info) => {
-                info.jsEvent.preventDefault(); // Prevents navigating to the Google URL
+                info.jsEvent.preventDefault();
+                this.showEventHoverCard = false;
+
+                const ev = info.event;
+                const isGoogleHoliday = ev.source && ev.source.id === 'google-holidays';
+                const isTodolist = ev.source && ev.source.id === 'todolist-events';
+                const isRenewal = ev.source && ev.source.id === 'renewal-events';
+
+                // Holidays, todolists, and renewals are read-only — don't open edit modal
+                if (isGoogleHoliday || isTodolist || isRenewal) return;
+
+                this.openEditModal(ev, info.jsEvent);
+            },
+            // Re-clamp events after navigation or async Google events load
+            datesSet: () => {
+                setTimeout(() => {
+                    if (this.calendar) this.calendar.updateSize();
+                }, 50);
             },
             eventMouseEnter: (info) => {
                 const ev = info.event;
                 const isGoogleHoliday = ev.source && ev.source.id === 'google-holidays';
+                const isTodolist = ev.source && ev.source.id === 'todolist-events';
+                const isRenewal = ev.source && ev.source.id === 'renewal-events';
+
+                let calendarName = 'Primary Calendar';
+                if (isGoogleHoliday) {
+                    calendarName = 'Holidays in Malaysia';
+                } else if (isTodolist) {
+                    calendarName = 'To-do Task';
+                } else if (isRenewal) {
+                    calendarName = 'Customer Renewal';
+                } else if (ev.extendedProps.customer_id) {
+                    const cust = this.customers.find(c => String(c.id) === String(ev.extendedProps.customer_id));
+                    if (cust) calendarName = cust.label;
+                }
 
                 this.hoverCardData = {
                     title: ev.title,
-                    calendarName: isGoogleHoliday ? 'Holidays in Malaysia' : (ev.extendedProps.calendarName || 'Primary Calendar'),
+                    calendarName: calendarName,
                     dateStr: ev.start.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
-                    creator: isGoogleHoliday ? 'Holidays in Malaysia' : (ev.extendedProps.creator || 'User Setup')
+                    creator: isGoogleHoliday ? 'Holidays in Malaysia' : (isTodolist ? 'Todolist' : (isRenewal ? 'System' : (ev.extendedProps.creator || 'User Setup')))
                 };
 
                 const rect = info.el.getBoundingClientRect();
@@ -283,21 +514,47 @@ const filamentCalendarFactory = ({
                     textColor: '#000000'
                 },
                 {
+                    id: 'todolist-events',
+                    events: this.fullCalendarTodolists,
+                    display: 'block',
+                    backgroundColor: '#dbeafe',
+                    borderColor: '#3b82f6',
+                    textColor: '#1e3a8a'
+                },
+                {
+                    id: 'renewal-events',
+                    events: this.fullCalendarRenewals,
+                    display: 'block',
+                    backgroundColor: '#fee2e2',
+                    borderColor: '#ef4444',
+                    textColor: '#991b1b'
+                },
+                this.filters.holidays ? {
                     id: 'google-holidays',
                     googleCalendarId: 'en.malaysia#holiday@group.v.calendar.google.com',
                     color: '#C6FFCA',
                     textColor: '#000000',
                     borderColor: '#008002'
-                }
-            ],
+                } : null
+            ].filter(Boolean),
             eventContent: (arg) => {
                 const isGoogleHoliday = arg.event.source && arg.event.source.id === 'google-holidays';
+                const isTodolist = arg.event.source && arg.event.source.id === 'todolist-events';
 
                 if (isGoogleHoliday) {
                     return {
                         html: `<div class=" flex items-center gap-1 overflow-hidden">
                             <svg class="w-2 h-2 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
                             <div class="text-xs font-semibold text-gray-700 capitalize truncate flex-1 min-w-0" title="${arg.event.title}">${arg.event.title}</div>
+                        </div>`
+                    };
+                }
+
+                if (isTodolist) {
+                    return {
+                        html: `<div class="flex items-center gap-1 overflow-hidden">
+                            <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                            <div class="text-xs font-semibold truncate flex-1 min-w-0" title="${arg.event.title}">${arg.event.title}</div>
                         </div>`
                     };
                 }
@@ -348,6 +605,11 @@ const filamentCalendarFactory = ({
             // Sync internal state
             this.selectedDate = this.calendar.getDate();
             this.currentDate = new Date(this.selectedDate);
+
+            // Force re-measure so dayMaxEvents: true clamps rows correctly
+            setTimeout(() => {
+                if (this.calendar) this.calendar.updateSize();
+            }, 100);
         }
     },
 
@@ -357,6 +619,11 @@ const filamentCalendarFactory = ({
     // =================================================================================================
 
     openEventModal(start, end, allDay, jsEvent = null) {
+        this.isEditing = false;
+        this.canDelete = false;
+        this.showDeleteConfirmModal = false;
+        this.fetchCustomers(); // always fetch fresh customer list
+
         if (!start) {
             start = new Date();
             // Default 1 hour from now without seconds
@@ -366,10 +633,11 @@ const filamentCalendarFactory = ({
         }
 
         this.eventForm = {
+            id: null,
             title: '',
             type: 'event',
             start: start,
-            end: end,
+            end: allDay ? new Date(end.getTime() - 24 * 60 * 60 * 1000) : end,
             allDay: allDay,
             customer_id: '',
             description: '',
@@ -406,9 +674,50 @@ const filamentCalendarFactory = ({
 
     closeEventModal() {
         this.showEventModal = false;
+        this.showDeleteConfirmModal = false;
         if (this.calendar) {
             this.calendar.unselect();
         }
+    },
+
+    openEditModal(ev, jsEvent = null) {
+        this.isEditing = true;
+        this.canDelete = true;
+        this.showDeleteConfirmModal = false;
+        this.fetchCustomers(); // always fetch fresh customer list
+
+        this.eventForm = {
+            id: ev.id,
+            title: ev.title,
+            type: 'event',
+            start: ev.start,
+            end: ev.extendedProps?.realEnd ? new Date(ev.extendedProps.realEnd) : (ev.end || ev.start),
+            allDay: !!ev.extendedProps?.all_day, // Use the real status from DB, not the display status
+            customer_id: ev.extendedProps?.customer_id || '',
+            description: ev.extendedProps?.description || '',
+            saving: false,
+            error: ''
+        };
+
+        // Position near click point
+        if (jsEvent) {
+            const modalWidth = 450;
+            const modalHeight = 450;
+            let top = jsEvent.clientY;
+            let left = jsEvent.clientX + 20;
+            if (left + modalWidth > window.innerWidth) left = jsEvent.clientX - modalWidth - 20;
+            if (top + modalHeight > window.innerHeight) top = window.innerHeight - modalHeight - 20;
+            if (top < 0) top = 20;
+            if (left < 0) left = 20;
+            this.eventModalPosition = { top, left };
+        } else {
+            this.eventModalPosition = {
+                top: Math.max((window.innerHeight - 450) / 2, 20),
+                left: Math.max((window.innerWidth - 450) / 2, 20)
+            };
+        }
+
+        this.showEventModal = true;
     },
 
     async saveEvent() {
@@ -419,43 +728,78 @@ const filamentCalendarFactory = ({
         this.eventForm.error = '';
         this.eventForm.saving = true;
 
+        // Ensure CSRF token is present for axios
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (token) {
+            axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
+        }
+
         const toISO = (d) => {
             if (!d) return null;
             const pad = (n) => String(n).padStart(2, '0');
-            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
         };
 
         let startTime = this.eventForm.start;
-        let endTime = this.eventForm.end;
-        
-        // For all-day events, treat end as same day (since FC end is exclusive)
+        let endTime = this.eventForm.end || this.eventForm.start;
+
+        // If it's an all-day event, ensure start is at 00:00 and end is at 23:59
         if (this.eventForm.allDay) {
-            endTime = startTime ? new Date(startTime.getTime() + 60 * 60000) : startTime;
+            if (startTime) {
+                startTime = new Date(startTime);
+                startTime.setHours(0, 0, 0, 0);
+            }
+            if (endTime) {
+                endTime = new Date(endTime);
+                endTime.setHours(23, 59, 59, 999);
+            }
         }
 
         try {
-            const response = await axios.post('/calendar/events/quick-store', {
-                title:       this.eventForm.title.trim(),
-                description: this.eventForm.description || null,
-                start_time:  toISO(startTime),
-                end_time:    toISO(endTime),
-                customer_id: this.eventForm.customer_id || null,
-            });
-
-            if (response.data.success) {
-                const ev = response.data.event;
-                // Add it live to the calendar without re-fetching
-                this.calendar.addEvent({
-                    id:              String(ev.id),
-                    title:           ev.title,
-                    start:           ev.start,
-                    end:             ev.end,
-                    backgroundColor: '#ffd7b5',
-                    borderColor:     '#ff6700',
-                    textColor:       '#000000',
-                    display:         'block',
+            let ev;
+            if (this.isEditing) {
+                // Update existing event
+                const response = await axios.patch(`/calendar/events/${this.eventForm.id}`, {
+                    title: this.eventForm.title.trim(),
+                    description: this.eventForm.description || null,
+                    start_time: toISO(startTime),
+                    end_time: toISO(endTime),
+                    customer_id: this.eventForm.customer_id || null,
+                    all_day: this.eventForm.allDay ? 1 : 0,
                 });
-                this.closeEventModal();
+                if (response.data.success) {
+                    ev = response.data.event;
+                    
+                    // Update local data cache
+                    const idx = this.events.findIndex(e => String(e.id) === String(ev.id));
+                    if (idx !== -1) {
+                        this.events[idx] = ev;
+                    }
+                    
+                    // Re-process all events to update calendar display
+                    this.processEvents(this.events);
+                    this.closeEventModal();
+                }
+            } else {
+                // Create new event
+                const response = await axios.post('/calendar/events/quick-store', {
+                    title: this.eventForm.title.trim(),
+                    description: this.eventForm.description || null,
+                    start_time: toISO(startTime),
+                    end_time: toISO(endTime),
+                    customer_id: this.eventForm.customer_id || null,
+                    all_day: this.eventForm.allDay ? 1 : 0,
+                });
+                if (response.data.success) {
+                    ev = response.data.event;
+                    
+                    // Add to local data cache
+                    this.events.push(ev);
+                    
+                    // Re-process all events to update calendar display
+                    this.processEvents(this.events);
+                    this.closeEventModal();
+                }
             }
         } catch (err) {
             const msg = err.response?.data?.message
@@ -464,6 +808,30 @@ const filamentCalendarFactory = ({
             this.eventForm.error = msg;
         } finally {
             this.eventForm.saving = false;
+        }
+    },
+
+    async deleteEvent() {
+        this.isDeletingEvent = true;
+        try {
+            await axios.delete(`/calendar/events/${this.eventForm.id}`);
+            const calEv = this.calendar.getEventById(String(this.eventForm.id));
+            if (calEv) calEv.remove();
+            this.showDeleteConfirmModal = false;
+            this.closeEventModal();
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to delete event.');
+        } finally {
+            this.isDeletingEvent = false;
+        }
+    },
+
+    async fetchCustomers() {
+        try {
+            const response = await axios.get('/calendar/customers');
+            this.customers = response.data;
+        } catch (err) {
+            console.error('Failed to fetch customers:', err);
         }
     },
 

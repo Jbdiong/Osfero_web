@@ -28,3 +28,18 @@ Route::middleware(['web', 'auth'])->post('/calendar/events/quick-store', [
     \App\Filament\Resources\Events\Pages\ListEvents::class,
     'storeQuickEvent',
 ])->name('calendar.events.quick-store');
+
+Route::middleware(['web', 'auth'])->patch('/calendar/events/{id}', [
+    \App\Filament\Resources\Events\Pages\ListEvents::class,
+    'updateQuickEvent',
+])->name('calendar.events.update');
+
+Route::middleware(['web', 'auth'])->delete('/calendar/events/{id}', [
+    \App\Filament\Resources\Events\Pages\ListEvents::class,
+    'deleteQuickEvent',
+])->name('calendar.events.delete');
+
+Route::middleware(['web', 'auth'])->get('/calendar/customers', [
+    \App\Filament\Resources\Events\Pages\ListEvents::class,
+    'getCustomers',
+])->name('calendar.customers');

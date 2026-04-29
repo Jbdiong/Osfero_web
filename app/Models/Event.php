@@ -17,6 +17,7 @@ class Event extends Model
         'description',
         'start_time',
         'end_time',
+        'all_day',
         'status_id',
         'tenant_id',
         'customer_id',
@@ -25,6 +26,7 @@ class Event extends Model
     protected $casts = [
         'start_time' => 'datetime',
         'end_time' => 'datetime',
+        'all_day' => 'boolean',
     ];
 
     public function tenant(): BelongsTo

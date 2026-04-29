@@ -7,13 +7,23 @@
         .fc-scroller::-webkit-scrollbar-track { background: #f1f1f1; }
         .fc-scroller::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
         .fc-scroller::-webkit-scrollbar-thumb:hover { background: #555; }
-        .fc-event { border-left-width: 4px; border-radius: 0.375rem; padding: 0.5rem; }
+        /* Compact events — less padding keeps rows tight like Google Calendar */
+        .fc-event { border-left-width: 3px; border-radius: 0.25rem; padding: 4px; }
         .fc-event-title { font-weight: 500; color: #111827; font-size: 0.75rem; }
         .fc-timegrid-now-indicator-line { border-color: #ea4335; border-width: 2px; }
         .fc-timegrid-now-indicator-arrow { border: none; background-color: #ea4335; border-radius: 50%; width: 10px; height: 10px; margin-top: -4px; }
         .fc-timegrid-col { border-color: #e5e7eb; }
         .fc-timegrid-slot-label { border-color: #e5e7eb; font-size: 0.75rem; color: #6b7280; }
+        /* Fixed row height — all rows are exactly 110px regardless of event count.
+           No overflow:hidden so multi-day spanning events render correctly across cells. */
+        .fc .fc-daygrid-day-frame { height: 110px; }
         
+        /* Filter Checkbox Colors */
+        .filter-events:checked { background-color: #ff6700 !important; border-color: #ff6700 !important; }
+        .filter-todolist:checked { background-color: #3b82f6 !important; border-color: #3b82f6 !important; }
+        .filter-renewals:checked { background-color: #ef4444 !important; border-color: #ef4444 !important; }
+        .filter-holidays:checked { background-color: #008002 !important; border-color: #008002 !important; }
+
         [x-cloak] { display: none !important; }
     </style>
 
@@ -50,6 +60,8 @@
             events: @js($events ?? []),
             upcomingDeadline: @js($upcoming_deadline ?? null),
             overdueRenewals: @js($overdue_renewals ?? []),
+            calendarRenewals: @js($calendar_renewals ?? []),
+            todolists: @js($todolists ?? []),
             customers: @js($customers ?? []),
             tenantId: @js($tenant_id ?? null)
         })"
@@ -58,7 +70,7 @@
             >
         <div class="grid md:grid-cols-5 gap-4 h-full">
             <!-- Left Sidebar: Widgets -->
-            <div class="md:col-span-1 grid-rows-3 grid h-full flex flex-col gap-4 row-span-1 min-h-0">
+            <div class="md:col-span-1 flex flex-col gap-4 h-full min-h-0">
                 
                 <!-- Mini Calendar Widget -->
                 <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 row-span-1">
@@ -96,6 +108,33 @@
                                 x-text="dayItem.day"
                             ></div>
                         </template>
+                    </div>
+                </div>
+
+                <!-- My Calendars (Filters) -->
+                <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5">
+                    <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-4">My calendars</h3>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" x-model="filters.events" @change="toggleSource('local-events', $event.target.checked)" 
+                                   class="filter-events w-4 h-4 rounded border-gray-300 transition-all cursor-pointer">
+                            <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Events</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" x-model="filters.todolist" @change="toggleSource('todolist-events', $event.target.checked)" 
+                                   class="filter-todolist w-4 h-4 rounded border-gray-300 transition-all cursor-pointer">
+                            <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">To-do Tasks</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" x-model="filters.renewals" @change="toggleSource('renewal-events', $event.target.checked)" 
+                                   class="filter-renewals w-4 h-4 rounded border-gray-300 transition-all cursor-pointer">
+                            <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Renewals</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" x-model="filters.holidays" @change="toggleSource('google-holidays', $event.target.checked)" 
+                                   class="filter-holidays w-4 h-4 rounded border-gray-300 transition-all cursor-pointer">
+                            <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Holidays</span>
+                        </label>
                     </div>
                 </div>
 
@@ -171,11 +210,31 @@
                 <!-- Calendar Toolbar -->
                 <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
                     <!-- Left: Title or Actions -->
-                    <div>
+                    <div class="flex items-center gap-6">
                          <a href="#" @click.prevent="openEventModal()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                             <x-heroicon-o-plus class="w-5 h-5" />
                             <span>New task</span>
                         </a>
+
+                        <!-- Legend -->
+                        <div class="flex items-center gap-4 px-4 py-2 bg-gray-50 dark:bg-gray-800/50 rounded-full border border-gray-100 dark:border-gray-700 mx-auto">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2.5 h-2.5 rounded-full bg-[#008002] shadow-[0_0_0_2px_rgba(0,128,2,0.1)]"></div>
+                                <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Holidays</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-2.5 h-2.5 rounded-full bg-[#ff6700] shadow-[0_0_0_2px_rgba(255,103,0,0.1)]"></div>
+                                <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Events</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-2.5 h-2.5 rounded-full bg-[#3b82f6] shadow-[0_0_0_2px_rgba(59,130,246,0.1)]"></div>
+                                <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Todo List</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-2.5 h-2.5 rounded-full bg-[#ef4444] shadow-[0_0_0_2px_rgba(239,68,68,0.1)]"></div>
+                                <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Renewals</span>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Right: View Selector and Navigation -->
@@ -246,8 +305,8 @@
                     </div>
                 </div>
 
-                <div class="flex-1 p-4 overflow-hidden">
-                    <div x-ref="fullCalendar" class="h-auto overflow-y-auto"></div>
+                <div class="flex-1 p-4 overflow-y-auto" style="min-height:0">
+                    <div x-ref="fullCalendar"></div>
                 </div>
             </div>
         </div>
@@ -489,7 +548,19 @@
                 :style="`top: ${eventModalPosition.top}px; left: ${eventModalPosition.left}px;`"
             >
                 <!-- Top Control Bar -->
-                <div class="flex items-center justify-end p-2">
+                <div class="flex items-center justify-end p-2 gap-1">
+                    <!-- Trash button: only shown when editing a regular event -->
+                    <button
+                        x-show="canDelete"
+                        x-cloak
+                        @click="showDeleteConfirmModal = true"
+                        class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Delete event"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
                     <button @click="closeEventModal" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                         <x-heroicon-o-x-mark class="h-5 w-5" />
                     </button>
@@ -510,8 +581,7 @@
 
                     <!-- Tabs -->
                     <div class="flex items-center gap-2 mb-6">
-                        <button class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-4 py-1.5 rounded-lg text-sm font-medium">Event</button>
-                        
+                        <button class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-4 py-1.5 rounded-lg text-sm font-medium" x-text="isEditing ? 'Edit event' : 'Event'"></button>
                     </div>
 
                     <!-- Icon Rows -->
@@ -522,8 +592,67 @@
                                 <x-heroicon-o-clock class="w-5 h-5" stroke-width="1.5" />
                             </div>
                             <div class="flex-1">
-                                <div class="text-sm text-gray-800 dark:text-gray-200" x-text="formatEventDateTimeDisplay()"></div>
-                                <div class="text-xs text-gray-500 mt-0.5">Time zone · Does not repeat</div>
+                                <div class="flex flex-wrap items-center gap-x-2 gap-y-3">
+                                    <!-- Start Date -->
+                                    <input 
+                                        type="date" 
+                                        :value="getPickerDate(eventForm.start)"
+                                        @change="setPickerDate('start', $event.target.value)"
+                                        class="text-sm border-0 border-b border-transparent focus:border-blue-600 focus:ring-0 p-0 bg-transparent cursor-pointer dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1"
+                                    >
+                                    
+                                    <!-- Start Time -->
+                                    <template x-if="!eventForm.allDay">
+                                        <div class="flex items-center gap-2">
+                                            <input 
+                                                type="time" 
+                                                :value="getPickerTime(eventForm.start)"
+                                                @change="setPickerTime('start', $event.target.value)"
+                                                class="text-sm border-0 border-b border-transparent focus:border-blue-600 focus:ring-0 p-0 bg-transparent cursor-pointer dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1"
+                                            >
+                                            <span class="text-gray-400">–</span>
+                                            
+                                            <!-- End Time -->
+                                            <input 
+                                                type="time" 
+                                                :value="getPickerTime(eventForm.end)"
+                                                @change="setPickerTime('end', $event.target.value)"
+                                                class="text-sm border-0 border-b border-transparent focus:border-blue-600 focus:ring-0 p-0 bg-transparent cursor-pointer dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1"
+                                            >
+                                        </div>
+                                    </template>
+
+                                    <!-- End Date (if different from start or if multi-day) -->
+                                    <template x-if="getPickerDate(eventForm.start) !== getPickerDate(eventForm.end)">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-gray-400" x-show="eventForm.allDay">–</span>
+                                            <input 
+                                                type="date" 
+                                                :value="getPickerDate(eventForm.end)"
+                                                @change="setPickerDate('end', $event.target.value)"
+                                                class="text-sm border-0 border-b border-transparent focus:border-blue-600 focus:ring-0 p-0 bg-transparent cursor-pointer dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1"
+                                            >
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- All day toggle -->
+                                <div class="flex items-center gap-2 mt-2">
+                                    <label class="flex items-center gap-2 cursor-pointer group">
+                                        <input 
+                                            type="checkbox" 
+                                            x-model="eventForm.allDay"
+                                            @change="if(!eventForm.allDay) { 
+                                                const s = new Date(eventForm.start); s.setHours(9,0,0,0); eventForm.start = s;
+                                                const e = new Date(eventForm.start); e.setHours(10,0,0,0); eventForm.end = e;
+                                            }"
+                                            class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                                        >
+                                        <span class="text-xs text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300">All day</span>
+                                    </label>
+                                    <span class="text-xs text-gray-400">·</span>
+                                    <span class="text-xs text-gray-400">Does not repeat</span>
+                                </div>
                             </div>
                         </div>
 
@@ -582,16 +711,81 @@
                             type="button" 
                             class="inline-flex justify-center rounded-full !px-4 py-2 !bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none shadow-sm transition-all active:scale-[0.98] disabled:opacity-50"
                         >
-                            Save
+                            <span x-text="isEditing ? 'Update' : 'Save'"></span>
                         </button>
                      </div>
                 </div>
             </div>
-        </div>
+        </div><!-- end event modal -->
+
+        <!-- DELETE CONFIRMATION MODAL (Filament style) -->
+        <div
+            x-show="showDeleteConfirmModal"
+            class="fixed inset-0 z-[200] flex items-center justify-center"
+            style="display: none;"
+            @keydown.escape.window="showDeleteConfirmModal = false"
+        >
+            <!-- Backdrop -->
+            <div class="fixed inset-0 bg-black/50" @click="showDeleteConfirmModal = false"></div>
+
+            <!-- Panel -->
+            <div
+                x-show="showDeleteConfirmModal"
+                x-transition:enter="ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="ease-in duration-150"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-95"
+                class="relative z-10 bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm mx-4 p-6 text-center"
+            >
+                <!-- Close X -->
+                <button @click="showDeleteConfirmModal = false" class="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <x-heroicon-o-x-mark class="w-4 h-4" />
+                </button>
+
+                <!-- Red trash icon -->
+                <div class="flex items-center justify-center w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 mx-auto mb-4">
+                    <svg class="w-7 h-7 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </div>
+
+                <!-- Title -->
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">
+                    Delete <span x-text="eventForm.title"></span>
+                </h3>
+
+                <!-- Body -->
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                    Are you sure you would like to do this?
+                </p>
+
+                <!-- Actions -->
+                <div class="flex gap-3 mt-6">
+                    <button
+                        @click="showDeleteConfirmModal = false"
+                        type="button"
+                        class="flex-1 !px-4 !py-2 !text-sm !font-medium !text-gray-700 dark:!text-gray-300 !bg-white dark:!bg-gray-700 !border !border-gray-300 dark:!border-gray-600 !rounded-full hover:!bg-gray-50 dark:hover:!bg-gray-600 !transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        @click="deleteEvent"
+                        :disabled="isDeletingEvent"
+                        type="button"
+                        class="flex-1 !px-4 !py-2 !text-sm !font-medium !text-white !bg-red-600 hover:!bg-red-700 !rounded-full !shadow-sm !transition-all active:!scale-[0.98] disabled:!opacity-50"
+                    >
+                        <span x-show="!isDeletingEvent">Delete</span>
+                        <span x-show="isDeletingEvent">Deleting...</span>
+                    </button>
+                </div>
             </div>
+        </div><!-- end delete confirm modal -->
+
+            </div><!-- filamentCalendar scope -->
         </div>
 
-        </div>
     </template>
 </div>
 </x-filament-panels::page>

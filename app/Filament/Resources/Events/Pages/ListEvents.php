@@ -61,9 +61,12 @@ class ListEvents extends ListRecords
         }
 
         // 2. Overdue/Upcoming Renewals
-        // Logic: Renewals due within next 7 days OR already overdue
+        // Sidebar logic: Renewals due within next 7 days OR already overdue
         $renewals = \App\Models\Renewal::where('tenant_id', $tenantId)
             ->where('Renew_Date', '<=', now()->addDays(7))
+            ->whereHas('status', function ($q) {
+                $q->where('name', '!=', 'Ended');
+            })
             ->orderBy('Renew_Date', 'asc')
             ->get()
             ->map(function ($renewal) {
@@ -76,18 +79,73 @@ class ListEvents extends ListRecords
                  ];
             });
 
+        // Calendar logic: ALL renewals where status is not 'Ended'
+        $calendarRenewals = \App\Models\Renewal::where('tenant_id', $tenantId)
+            ->whereHas('status', function ($q) {
+                $q->where('name', '!=', 'Ended');
+            })
+            ->get()
+            ->map(function ($renewal) {
+                 return [
+                    'id' => 'renewal-' . $renewal->id,
+                    'title' => $renewal->label . ' (Renewal)',
+                    'start' => $renewal->Renew_Date->format('Y-m-d'),
+                    'allDay' => true,
+                    'type' => 'renewal',
+                 ];
+            });
+
+        // 3. Incomplete Todolists (show on calendar if start_date or end_date is set)
+        // Only show tasks where the current user is a PIC
+        $todolists = \App\Models\Todolist::where('tenant_id', $tenantId)
+            ->whereHas('todolistPICs', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            })
+            ->whereHas('status', function ($q) {
+                $q->where('name', '!=', 'Completed');
+            })
+            ->where(function ($q) {
+                $q->whereNotNull('start_date')
+                  ->orWhereNotNull('end_date');
+            })
+            ->get()
+            ->map(function ($task) {
+                // Use start_date as start; fall back to end_date if no start_date
+                $start = $task->start_date
+                    ? $task->start_date->format('Y-m-d')
+                    : $task->end_date->format('Y-m-d');
+
+                // end is exclusive in FullCalendar all-day events, so add 1 day
+                $end = $task->end_date
+                    ? $task->end_date->copy()->addDay()->format('Y-m-d')
+                    : null;
+
+                return [
+                    'id'    => 'todo-' . $task->id,
+                    'title' => $task->Title,
+                    'start' => $start,
+                    'end'   => $end,
+                    'type'  => 'todolist',
+                ];
+            });
+
         return [
             'events' => \App\Models\Event::where('tenant_id', $tenantId)->get()->map(function ($event) {
                 return [
-                    'id' => $event->id,
-                    'title' => $event->title,
-                    'start' => $event->start_time,
-                    'end' => $event->end_time,
-                    'color' => 'blue', // required by calendar.js colorMap
+                    'id'          => $event->id,
+                    'title'       => $event->title,
+                    'start'       => $event->start_time,
+                    'end'         => $event->end_time,
+                    'allDay'      => (bool)$event->all_day,
+                    'color'       => 'blue',
+                    'customer_id' => $event->customer_id,
+                    'description' => $event->description,
                 ];
             }),
             'upcoming_deadline' => $upcomingDeadlineData ?: null,
             'overdue_renewals' => $renewals,
+            'calendar_renewals' => $calendarRenewals,
+            'todolists' => $todolists,
             'customers' => \App\Models\Customer::where('tenant_id', $tenantId)
                 ->orderBy('name')
                 ->get(['id', 'name', 'company'])
@@ -106,6 +164,7 @@ class ListEvents extends ListRecords
             'start_time'  => 'required|date',
             'end_time'    => 'required|date|after_or_equal:start_time',
             'customer_id' => 'nullable|exists:customers,id',
+            'all_day'     => 'nullable|boolean',
         ]);
         $user = auth()->user();
         $tenantId = $user->tenant_id;
@@ -115,17 +174,85 @@ class ListEvents extends ListRecords
             'start_time'  => $data['start_time'],
             'end_time'    => $data['end_time'],
             'customer_id' => $data['customer_id'] ?? null,
+            'all_day'     => $data['all_day'] ?? false,
             'tenant_id'   => $tenantId,
         ]);
         return response()->json([
             'success' => true,
             'event' => [
-                'id'    => $event->id,
-                'title' => $event->title,
-                'start' => $event->start_time,
-                'end'   => $event->end_time,
+                'id'          => $event->id,
+                'title'       => $event->title,
+                'description' => $event->description,
+                'start'       => $event->start_time->toDateTimeString(),
+                'end'         => $event->end_time->toDateTimeString(),
+                'allDay'      => (bool)$event->all_day,
+                'customer_id' => $event->customer_id,
             ],
         ]);
+    }
+
+    // PATCH handler — edit an existing event from the calendar modal
+    public function updateQuickEvent(\Illuminate\Http\Request $request, int $id): \Illuminate\Http\JsonResponse
+    {
+        $user    = auth()->user();
+        $event   = \App\Models\Event::where('tenant_id', $user->tenant_id)->findOrFail($id);
+
+        $data = $request->validate([
+            'title'       => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'start_time'  => 'required|date',
+            'end_time'    => 'required|date|after_or_equal:start_time',
+            'customer_id' => 'nullable|exists:customers,id',
+            'all_day'     => 'nullable|boolean',
+        ]);
+
+        $event->update([
+            'title'       => $data['title'],
+            'description' => $data['description'] ?? null,
+            'start_time'  => $data['start_time'],
+            'end_time'    => $data['end_time'],
+            'customer_id' => $data['customer_id'] ?? null,
+            'all_day'     => $data['all_day'] ?? false,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'event'   => [
+                'id'          => $event->id,
+                'title'       => $event->title,
+                'description' => $event->description,
+                'start'       => $event->start_time->toDateTimeString(),
+                'end'         => $event->end_time->toDateTimeString(),
+                'allDay'      => (bool)$event->all_day,
+                'customer_id' => $event->customer_id,
+            ],
+        ]);
+    }
+
+    // DELETE handler — remove an event from the calendar modal
+    public function deleteQuickEvent(int $id): \Illuminate\Http\JsonResponse
+    {
+        $user  = auth()->user();
+        $event = \App\Models\Event::where('tenant_id', $user->tenant_id)->findOrFail($id);
+        $event->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    // GET handler — returns fresh customer list for the modal dropdown
+    public function getCustomers(): \Illuminate\Http\JsonResponse
+    {
+        $user = auth()->user();
+        $customers = \App\Models\Customer::where('tenant_id', $user->tenant_id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'company'])
+            ->map(fn($c) => [
+                'id'    => $c->id,
+                'label' => $c->name . ($c->company ? ' (' . $c->company . ')' : ''),
+            ])
+            ->values();
+
+        return response()->json($customers);
     }
 
     protected function getHeaderActions(): array
