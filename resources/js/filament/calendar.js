@@ -230,7 +230,7 @@ const filamentCalendarFactory = ({
         this.fullCalendarEvents = rawEvents.map(event => {
             const start = new Date(event.start);
             const end = new Date(event.end || event.start);
-            
+
             let displayAllDay = !!event.allDay;
             let isMultiDayTimed = false;
 
@@ -256,14 +256,14 @@ const filamentCalendarFactory = ({
             return {
                 id: event.id.toString(),
                 title: event.title,
-                start: event.start, 
-                end: displayEnd,     
+                start: event.start,
+                end: displayEnd,
                 allDay: displayAllDay,
-                backgroundColor: '#ffd7b5', 
-                borderColor: '#ff6700', 
+                backgroundColor: '#ffd7b5',
+                borderColor: '#ff6700',
                 textColor: '#000000',
-                extendedProps: { 
-                    ...event, 
+                extendedProps: {
+                    ...event,
                     isMultiDayTimed: isMultiDayTimed,
                     realEnd: event.end // Keep real end for modal
                 }
@@ -342,7 +342,7 @@ const filamentCalendarFactory = ({
 
     toggleSource(sourceId, isVisible) {
         if (!this.calendar) return;
-        
+
         if (!isVisible) {
             const source = this.calendar.getEventSourceById(sourceId);
             if (source) source.remove();
@@ -405,16 +405,16 @@ const filamentCalendarFactory = ({
             eventContent: (arg) => {
                 const ev = arg.event;
                 const isMultiDayTimed = !ev.extendedProps?.all_day && ev.allDay;
-                
+
                 if (isMultiDayTimed) {
                     const start = ev.start;
                     const end = ev.extendedProps?.realEnd ? new Date(ev.extendedProps.realEnd) : ev.end;
-                    
+
                     const formatTime = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
                     const formatDate = (d) => `${d.getDate()}/${d.getMonth() + 1}`;
-                    
+
                     const rangeStr = `${formatDate(start)} ${formatTime(start)} - ${formatDate(end)} ${formatTime(end)}`;
-                    
+
                     return {
                         html: `<div class="fc-content" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85em;">
                                 <span class="fc-time" style="font-weight: 600; margin-right: 4px;">${rangeStr}</span>
@@ -769,13 +769,13 @@ const filamentCalendarFactory = ({
                 });
                 if (response.data.success) {
                     ev = response.data.event;
-                    
+
                     // Update local data cache
                     const idx = this.events.findIndex(e => String(e.id) === String(ev.id));
                     if (idx !== -1) {
                         this.events[idx] = ev;
                     }
-                    
+
                     // Re-process all events to update calendar display
                     this.processEvents(this.events);
                     this.closeEventModal();
@@ -792,10 +792,10 @@ const filamentCalendarFactory = ({
                 });
                 if (response.data.success) {
                     ev = response.data.event;
-                    
+
                     // Add to local data cache
                     this.events.push(ev);
-                    
+
                     // Re-process all events to update calendar display
                     this.processEvents(this.events);
                     this.closeEventModal();

@@ -57,12 +57,12 @@ Route::prefix('v1')->group(function () {
         Route::put('/inventory/variants/{variantId}', [\App\Http\Controllers\Api\InventoryController::class, 'updateVariant']);
 
         // Lead dependencies & Lookups
-        Route::get('/marketers', [\App\Http\Controllers\LookupController::class, 'getMarketers']);
-        Route::get('/lead-statuses', function(\Illuminate\Http\Request $request) {
-            return app(\App\Http\Controllers\LookupController::class)->getByParent($request, 'Lead_Status');
+        Route::get('/marketers', [\App\Http\Controllers\Api\LookupController::class, 'getMarketers']);
+        Route::get('/lead-statuses', function (Request $request) {
+            return app(\App\Http\Controllers\Api\LookupController::class)->getByParent($request, 'Lead_Status');
         });
-        Route::get('/lead-payments', function(\Illuminate\Http\Request $request) {
-            return app(\App\Http\Controllers\LookupController::class)->getByParent($request, 'Payment_Status');
+        Route::get('/payment-statuses', function (Request $request) {
+            return app(\App\Http\Controllers\Api\LookupController::class)->getByParent($request, 'Payment_Status');
         });
 
         // FCM mock

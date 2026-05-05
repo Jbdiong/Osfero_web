@@ -23,11 +23,28 @@ class PackageForm
                         Forms\Components\Hidden::make('tenant_id')
                             ->default(fn () => auth()->user()->last_active_tenant_id),
                         Forms\Components\Select::make('service_type')
-                            ->options([
-                                'Design' => '🎨 Design',
-                                'Video' => '🎬 Video',
-                                'Ads Management' => '📢 Ads Management',
+                            ->options(function () {
+                                $existing = \App\Models\OrderItem::when(auth()->check() && auth()->user()->tenant_id, fn($q) => $q->where('tenant_id', auth()->user()->tenant_id))
+                                    ->whereNotNull('service_type')
+                                    ->distinct()
+                                    ->pluck('service_type', 'service_type')
+                                    ->toArray();
+                                return array_merge($existing, [
+                                    'Design' => '🎨 Design',
+                                    'Video' => '🎬 Video',
+                                    'Ads Management' => '📢 Ads Management',
+                                ]);
+                            })
+                            ->searchable()
+                            ->createOptionForm([
+                                Forms\Components\TextInput::make('service_type')
+                                    ->label('Custom Service Type')
+                                    ->required()
+                                    ->maxLength(255),
                             ])
+                            ->createOptionUsing(function (array $data) {
+                                return $data['service_type'];
+                            })
                             ->required(),
                         Forms\Components\TextInput::make('default_qty')
                             ->label('Default Qty')

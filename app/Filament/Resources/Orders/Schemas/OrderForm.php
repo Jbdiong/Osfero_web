@@ -56,21 +56,97 @@ class OrderForm
                     })
                     ->dehydrated(false)
                     ->helperText('Selecting a package will automatically populate the items below.'),
-                Forms\Components\Grid::make(2)->schema([
+                Forms\Components\Grid::make(3)->schema([
                     Forms\Components\DatePicker::make('purchase_date')
                         ->default(now())
                         ->required(),
                     Forms\Components\DatePicker::make('deadline')
                         ->label('Order Deadline')
                         ->nullable(),
+                    Forms\Components\TextInput::make('total_amount')
+                        ->required()
+                        ->numeric()
+                        ->default(0.00),
                 ]),
-                Forms\Components\TextInput::make('total_amount')
-                    ->required()
-                    ->numeric()
-                    ->default(0.00),
-                Forms\Components\TextInput::make('invoice_no')
+                Forms\Components\TextInput::make('quotation_no')
+                    ->label('Quotation Number')
                     ->maxLength(255)
-                    ->default(null),
+                    ->default(null)
+                    ->disabled(fn () => strtolower(auth()->user()->role->role ?? '') === 'staff'),
+                Forms\Components\FileUpload::make('quotation_file')
+                    ->label('Quotation (PDF)')
+                    ->acceptedFileTypes(['application/pdf'])
+                    ->directory('quotations')
+                    ->downloadable()
+                    ->openable()
+                    ->default(null)
+                    ->live()
+                    ->disabled(fn () => strtolower(auth()->user()->role->role ?? '') === 'staff'),
+                Forms\Components\Placeholder::make('quotation_preview')
+                    ->label('Quotation Preview')
+                    ->content(function (Forms\Get $get) {
+                        $file = $get('quotation_file');
+                        if (!$file) return '-';
+                        $path = is_array($file) ? reset($file) : $file;
+                        if (is_object($path) && method_exists($path, 'temporaryUrl')) {
+                            try {
+                                $url = $path->temporaryUrl();
+                                return new \Illuminate\Support\HtmlString('<iframe src="'.$url.'" style="width: 100%; height: 600px; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-top: 0.5rem;"></iframe>');
+                            } catch (\Throwable $e) {
+                                return new \Illuminate\Support\HtmlString('<div style="padding: 1rem; color: #6b7280; font-style: italic; border: 1px dashed #d1d5db; border-radius: 0.5rem; margin-top: 0.5rem;">The file is ready, but the preview could not be generated yet. It will be available after saving.</div>');
+                            }
+                        }
+                        if (is_string($path)) {
+                            $url = asset('storage/' . $path);
+                            return new \Illuminate\Support\HtmlString('<iframe src="'.$url.'" style="width: 100%; height: 600px; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-top: 0.5rem;"></iframe>');
+                        }
+                        return '-';
+                    })
+                    ->visible(fn (Forms\Get $get) => filled($get('quotation_file')))
+                    ->columnSpanFull(),
+
+                Forms\Components\TextInput::make('po_no')
+                    ->label('PO Number')
+                    ->maxLength(255)
+                    ->default(null)
+                    ->disabled(fn () => strtolower(auth()->user()->role->role ?? '') === 'staff'),
+                Forms\Components\FileUpload::make('po_file')
+                    ->label('Purchase Order (PDF)')
+                    ->acceptedFileTypes(['application/pdf'])
+                    ->directory('purchase-orders')
+                    ->downloadable()
+                    ->openable()
+                    ->default(null)
+                    ->live()
+                    ->disabled(fn () => strtolower(auth()->user()->role->role ?? '') === 'staff'),
+                Forms\Components\Placeholder::make('po_preview')
+                    ->label('PO Preview')
+                    ->content(function (Forms\Get $get) {
+                        $file = $get('po_file');
+                        if (!$file) return '-';
+                        $path = is_array($file) ? reset($file) : $file;
+                        if (is_object($path) && method_exists($path, 'temporaryUrl')) {
+                            try {
+                                $url = $path->temporaryUrl();
+                                return new \Illuminate\Support\HtmlString('<iframe src="'.$url.'" style="width: 100%; height: 600px; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-top: 0.5rem;"></iframe>');
+                            } catch (\Throwable $e) {
+                                return new \Illuminate\Support\HtmlString('<div style="padding: 1rem; color: #6b7280; font-style: italic; border: 1px dashed #d1d5db; border-radius: 0.5rem; margin-top: 0.5rem;">The file is ready, but the preview could not be generated yet. It will be available after saving.</div>');
+                            }
+                        }
+                        if (is_string($path)) {
+                            $url = asset('storage/' . $path);
+                            return new \Illuminate\Support\HtmlString('<iframe src="'.$url.'" style="width: 100%; height: 600px; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-top: 0.5rem;"></iframe>');
+                        }
+                        return '-';
+                    })
+                    ->visible(fn (Forms\Get $get) => filled($get('po_file')))
+                    ->columnSpanFull(),
+
+                Forms\Components\TextInput::make('invoice_no')
+                    ->label('Invoice Number')
+                    ->maxLength(255)
+                    ->default(null)
+                    ->disabled(fn () => strtolower(auth()->user()->role->role ?? '') === 'staff'),
                 Forms\Components\FileUpload::make('invoice_file')
                     ->label('Invoice (PDF)')
                     ->acceptedFileTypes(['application/pdf'])
@@ -78,7 +154,8 @@ class OrderForm
                     ->downloadable()
                     ->openable()
                     ->default(null)
-                    ->live(), // Auto-refresh the form state when this changes
+                    ->live() // Auto-refresh the form state when this changes
+                    ->disabled(fn () => strtolower(auth()->user()->role->role ?? '') === 'staff'),
                 Forms\Components\Placeholder::make('invoice_preview')
                     ->label('Invoice Preview')
                     ->content(function (Forms\Get $get) {
@@ -115,11 +192,28 @@ class OrderForm
                         Forms\Components\Hidden::make('tenant_id')
                             ->default(fn () => auth()->user()->last_active_tenant_id),
                         Forms\Components\Select::make('service_type')
-                            ->options([
-                                'Design' => '🎨 Design',
-                                'Video' => '🎬 Video',
-                                'Ads Management' => '📢 Ads Management',
+                            ->options(function () {
+                                $existing = \App\Models\OrderItem::when(auth()->check() && auth()->user()->tenant_id, fn($q) => $q->where('tenant_id', auth()->user()->tenant_id))
+                                    ->whereNotNull('service_type')
+                                    ->distinct()
+                                    ->pluck('service_type', 'service_type')
+                                    ->toArray();
+                                return array_merge($existing, [
+                                    'Design' => '🎨 Design',
+                                    'Video' => '🎬 Video',
+                                    'Ads Management' => '📢 Ads Management',
+                                ]);
+                            })
+                            ->searchable()
+                            ->createOptionForm([
+                                Forms\Components\TextInput::make('service_type')
+                                    ->label('Custom Service Type')
+                                    ->required()
+                                    ->maxLength(255),
                             ])
+                            ->createOptionUsing(function (array $data) {
+                                return $data['service_type'];
+                            })
                             ->required(),
                         Forms\Components\TextInput::make('total_qty_purchased')
                             ->label('Total Qty Purchased')

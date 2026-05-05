@@ -11,7 +11,7 @@ class PackagesTable
                 Tables\Columns\TextColumn::make('package_name')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('base_price')
-                    ->numeric()
+                    ->prefix('RM ')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()

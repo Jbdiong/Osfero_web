@@ -42,6 +42,14 @@ class AdminPanelProvider extends PanelProvider
                 'panels::head.end',
                 fn (): string => '<style>:root { --fi-topbar-height: 20rem; }</style>',
             )
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
+                fn (): \Illuminate\Contracts\View\View => view('filament.auth.privacy-policy-link'),
+            )
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::AUTH_REGISTER_FORM_AFTER,
+                fn (): \Illuminate\Contracts\View\View => view('filament.auth.privacy-policy-link'),
+            )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverClusters(in: app_path('Filament/Clusters'), for: 'App\Filament\Clusters')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')

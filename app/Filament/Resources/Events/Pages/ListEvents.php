@@ -130,7 +130,12 @@ class ListEvents extends ListRecords
             });
 
         return [
-            'events' => \App\Models\Event::where('tenant_id', $tenantId)->get()->map(function ($event) {
+            'events' => \App\Models\Event::where('tenant_id', $tenantId)
+                ->whereHas('eventPICs', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                })
+                ->get()
+                ->map(function ($event) {
                 return [
                     'id'          => $event->id,
                     'title'       => $event->title,
@@ -177,6 +182,12 @@ class ListEvents extends ListRecords
             'all_day'     => $data['all_day'] ?? false,
             'tenant_id'   => $tenantId,
         ]);
+
+        // Assign current user as PIC
+        $event->eventPICs()->create([
+            'user_id' => $user->id,
+            'tenant_id' => $tenantId,
+        ]);
         return response()->json([
             'success' => true,
             'event' => [
@@ -195,7 +206,11 @@ class ListEvents extends ListRecords
     public function updateQuickEvent(\Illuminate\Http\Request $request, int $id): \Illuminate\Http\JsonResponse
     {
         $user    = auth()->user();
-        $event   = \App\Models\Event::where('tenant_id', $user->tenant_id)->findOrFail($id);
+        $event   = \App\Models\Event::where('tenant_id', $user->tenant_id)
+            ->whereHas('eventPICs', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            })
+            ->findOrFail($id);
 
         $data = $request->validate([
             'title'       => 'required|string|max:255',
@@ -233,7 +248,11 @@ class ListEvents extends ListRecords
     public function deleteQuickEvent(int $id): \Illuminate\Http\JsonResponse
     {
         $user  = auth()->user();
-        $event = \App\Models\Event::where('tenant_id', $user->tenant_id)->findOrFail($id);
+        $event = \App\Models\Event::where('tenant_id', $user->tenant_id)
+            ->whereHas('eventPICs', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            })
+            ->findOrFail($id);
         $event->delete();
 
         return response()->json(['success' => true]);

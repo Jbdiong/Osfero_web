@@ -14,13 +14,21 @@ class OrdersTable
             ->columns([
                 Tables\Columns\TextColumn::make('invoice_no')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('po_no')
+                    ->label('PO Number')
+                    ->searchable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('quotation_no')
+                    ->label('Quotation Number')
+                    ->searchable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('customer.name')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('purchase_date')
                     ->date()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('total_amount')
-                    ->money('MYR')
+                    ->prefix('RM ')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')

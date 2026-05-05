@@ -43,3 +43,7 @@ Route::middleware(['web', 'auth'])->get('/calendar/customers', [
     \App\Filament\Resources\Events\Pages\ListEvents::class,
     'getCustomers',
 ])->name('calendar.customers');
+
+Route::get('/legal/privacy-policy', function () {
+    return view('privacy-policy');
+})->name('privacy-policy');

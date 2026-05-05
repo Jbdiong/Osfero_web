@@ -19,6 +19,10 @@ class Order extends Model
         'total_amount',
         'invoice_no',
         'invoice_file',
+        'po_no',
+        'po_file',
+        'quotation_no',
+        'quotation_file',
     ];
 
     protected $casts = [

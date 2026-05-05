@@ -10,10 +10,46 @@
         /* Compact events — less padding keeps rows tight like Google Calendar */
         .fc-event { border-left-width: 3px; border-radius: 0.25rem; padding: 4px; }
         .fc-event-title { font-weight: 500; color: #111827; font-size: 0.75rem; }
+        /* Main Calendar Today Highlight */
+        .fc .fc-daygrid-day.fc-day-today {
+            background-color: rgba(59, 130, 246, 0.03) !important;
+        }
+        .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+            background-color: #2563eb;
+            color: white !important;
+            border-radius: 9999px;
+            min-width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 4px;
+            font-weight: 600;
+            padding: 0 6px;
+        }
+        
+        .dark .fc .fc-daygrid-day.fc-day-today {
+            background-color: rgba(156, 163, 175, 0.05) !important;
+        }
+        .dark .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+            background-color: #4b5563; /* gray-600 */
+            color: #f1f5f9 !important;
+        }
+
         .fc-timegrid-now-indicator-line { border-color: #ea4335; border-width: 2px; }
         .fc-timegrid-now-indicator-arrow { border: none; background-color: #ea4335; border-radius: 50%; width: 10px; height: 10px; margin-top: -4px; }
-        .fc-timegrid-col { border-color: #e5e7eb; }
-        .fc-timegrid-slot-label { border-color: #e5e7eb; font-size: 0.75rem; color: #6b7280; }
+        
+        /* Grid Lines contrast reduction */
+        .fc-theme-standard td, .fc-theme-standard th, .fc-scrollgrid {
+            border-color: #e5e7eb !important;
+        }
+        .dark .fc-theme-standard td, .dark .fc-theme-standard th, .dark .fc-scrollgrid {
+            border-color: #374151 !important; /* gray-700 - much softer contrast for dark mode */
+        }
+
+        .fc-timegrid-slot-label { font-size: 0.75rem; color: #6b7280; }
+        .dark .fc-timegrid-slot-label { color: #9ca3af; }
+        
         /* Fixed row height — all rows are exactly 110px regardless of event count.
            No overflow:hidden so multi-day spanning events render correctly across cells. */
         .fc .fc-daygrid-day-frame { height: 110px; }
@@ -73,7 +109,7 @@
             <div class="md:col-span-1 flex flex-col gap-4 h-full min-h-0">
                 
                 <!-- Mini Calendar Widget -->
-                <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 row-span-1">
+                <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 row-span-1">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-semibold text-gray-900 dark:text-white" x-text="selectedMonthName"></h3>
                         <div class="flex gap-1">
@@ -87,23 +123,23 @@
                     </div>
                     
                     <div class="grid grid-cols-7 gap-1 text-xs text-center">
-                        <div class="text-gray-500 py-1">SU</div>
-                        <div class="text-gray-500 py-1">MO</div>
-                        <div class="text-gray-500 py-1">TU</div>
-                        <div class="text-gray-500 py-1">WE</div>
-                        <div class="text-gray-500 py-1">TH</div>
-                        <div class="text-gray-500 py-1">FR</div>
-                        <div class="text-gray-500 py-1">SA</div>
+                        <div class="text-gray-500 dark:text-gray-200 py-1 font-medium">SU</div>
+                        <div class="text-gray-500 dark:text-gray-200 py-1 font-medium">MO</div>
+                        <div class="text-gray-500 dark:text-gray-200 py-1 font-medium">TU</div>
+                        <div class="text-gray-500 dark:text-gray-200 py-1 font-medium">WE</div>
+                        <div class="text-gray-500 dark:text-gray-200 py-1 font-medium">TH</div>
+                        <div class="text-gray-500 dark:text-gray-200 py-1 font-medium">FR</div>
+                        <div class="text-gray-500 dark:text-gray-200 py-1 font-medium">SA</div>
                         
                         <template x-for="(dayItem, index) in calendarDays" :key="index">
                             <div 
                                 @click="dayItem.day && selectDate(dayItem)"
                                 :class="[
-                                    'py-2 rounded cursor-pointer',
-                                    !dayItem.isCurrentMonth ? 'text-gray-300' :
-                                    dayItem.isToday ? 'bg-blue-600 text-white font-semibold' :
-                                    dayItem.isSelected ? 'bg-blue-100 text-blue-700' :
-                                    'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                                    'py-2 rounded cursor-pointer font-medium',
+                                    !dayItem.isCurrentMonth ? 'text-gray-300 dark:text-gray-600' :
+                                    dayItem.isToday ? 'bg-blue-600 text-white dark:bg-gray-700 dark:text-white font-semibold' :
+                                    dayItem.isSelected ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' :
+                                    'text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-800'
                                 ]"
                                 x-text="dayItem.day"
                             ></div>
@@ -112,34 +148,34 @@
                 </div>
 
                 <!-- My Calendars (Filters) -->
-                <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5">
+                <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
                     <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-4">My calendars</h3>
                     <div class="space-y-3">
                         <label class="flex items-center gap-3 cursor-pointer group">
                             <input type="checkbox" x-model="filters.events" @change="toggleSource('local-events', $event.target.checked)" 
                                    class="filter-events w-4 h-4 rounded border-gray-300 transition-all cursor-pointer">
-                            <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Events</span>
+                            <span class="text-sm font-medium text-gray-700 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Events</span>
                         </label>
                         <label class="flex items-center gap-3 cursor-pointer group">
                             <input type="checkbox" x-model="filters.todolist" @change="toggleSource('todolist-events', $event.target.checked)" 
                                    class="filter-todolist w-4 h-4 rounded border-gray-300 transition-all cursor-pointer">
-                            <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">To-do Tasks</span>
+                            <span class="text-sm font-medium text-gray-700 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white transition-colors">To-do Tasks</span>
                         </label>
                         <label class="flex items-center gap-3 cursor-pointer group">
                             <input type="checkbox" x-model="filters.renewals" @change="toggleSource('renewal-events', $event.target.checked)" 
                                    class="filter-renewals w-4 h-4 rounded border-gray-300 transition-all cursor-pointer">
-                            <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Renewals</span>
+                            <span class="text-sm font-medium text-gray-700 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Renewals</span>
                         </label>
                         <label class="flex items-center gap-3 cursor-pointer group">
                             <input type="checkbox" x-model="filters.holidays" @change="toggleSource('google-holidays', $event.target.checked)" 
                                    class="filter-holidays w-4 h-4 rounded border-gray-300 transition-all cursor-pointer">
-                            <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Holidays</span>
+                            <span class="text-sm font-medium text-gray-700 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Holidays</span>
                         </label>
                     </div>
                 </div>
 
                 <!-- Upcoming Deadlines -->
-                <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 row-span-1">
+                <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 row-span-1">
                     <template x-if="upcomingDeadline && upcomingDeadline.title">
                         <div>
                             <div class="flex items-center justify-between mb-4">
@@ -179,7 +215,7 @@
                 </div>
 
                 <!-- Overdue Renewals -->
-                 <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 row-span-1 flex flex-col min-h-0 overflow-hidden">
+                 <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 row-span-1 flex flex-col min-h-0 overflow-hidden">
                     <div class="flex items-center justify-between mb-4 flex-shrink-0">
                         <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Renewal</h3>
                         <button @click="openRenewalTableModal" class="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">View all</button>
@@ -205,10 +241,10 @@
             </div>
 
             <!-- Main Calendar -->
-            <div class="md:col-span-4 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col row-span-1">
+            <div class="md:col-span-4 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col row-span-1">
                 
                 <!-- Calendar Toolbar -->
-                <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+                <div class="flex items-center justify-between p-4 flex-shrink-0">
                     <!-- Left: Title or Actions -->
                     <div class="flex items-center gap-6">
                          <a href="#" @click.prevent="openEventModal()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
@@ -217,22 +253,22 @@
                         </a>
 
                         <!-- Legend -->
-                        <div class="flex items-center gap-4 px-4 py-2 bg-gray-50 dark:bg-gray-800/50 rounded-full border border-gray-100 dark:border-gray-700 mx-auto">
+                        <div class="flex items-center gap-4 px-4 py-2 bg-gray-50 dark:bg-gray-900 rounded-full border border-gray-100 dark:border-gray-700 mx-auto">
                             <div class="flex items-center gap-2">
                                 <div class="w-2.5 h-2.5 rounded-full bg-[#008002] shadow-[0_0_0_2px_rgba(0,128,2,0.1)]"></div>
-                                <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Holidays</span>
+                                <span class="text-xs font-medium text-gray-600 dark:text-white">Holidays</span>
                             </div>
                             <div class="flex items-center gap-2">
                                 <div class="w-2.5 h-2.5 rounded-full bg-[#ff6700] shadow-[0_0_0_2px_rgba(255,103,0,0.1)]"></div>
-                                <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Events</span>
+                                <span class="text-xs font-medium text-gray-600 dark:text-white">Events</span>
                             </div>
                             <div class="flex items-center gap-2">
                                 <div class="w-2.5 h-2.5 rounded-full bg-[#3b82f6] shadow-[0_0_0_2px_rgba(59,130,246,0.1)]"></div>
-                                <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Todo List</span>
+                                <span class="text-xs font-medium text-gray-600 dark:text-white">Todo List</span>
                             </div>
                             <div class="flex items-center gap-2">
                                 <div class="w-2.5 h-2.5 rounded-full bg-[#ef4444] shadow-[0_0_0_2px_rgba(239,68,68,0.1)]"></div>
-                                <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Renewals</span>
+                                <span class="text-xs font-medium text-gray-600 dark:text-white">Renewals</span>
                             </div>
                         </div>
                     </div>
@@ -496,25 +532,25 @@
                 <!-- Calendar Name -->
                 <div class="flex items-center gap-4">
                     <div class="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                        <x-heroicon-s-user class="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <x-heroicon-s-user class="w-4 h-4 text-gray-400 dark:text-gray-300" />
                     </div>
-                    <div class="text-sm text-gray-700 dark:text-gray-300 font-sans tracking-wide" x-text="hoverCardData.calendarName"></div>
+                    <div class="text-sm text-gray-700 dark:text-gray-100 font-sans tracking-wide" x-text="hoverCardData.calendarName"></div>
                 </div>
 
                 <!-- Date -->
                 <div class="flex items-center gap-4">
                     <div class="w-6 flex items-center justify-center">
-                         <x-heroicon-o-clock class="w-5 h-5 text-gray-700 dark:text-gray-400" stroke-width="1.5" />
+                         <x-heroicon-o-clock class="w-5 h-5 text-gray-700 dark:text-gray-300" stroke-width="1.5" />
                     </div>
-                    <div class="text-sm text-gray-700 dark:text-gray-300 font-sans tracking-wide" x-text="hoverCardData.dateStr"></div>
+                    <div class="text-sm text-gray-700 dark:text-gray-100 font-sans tracking-wide" x-text="hoverCardData.dateStr"></div>
                 </div>
 
                 <!-- Creator -->
                  <div class="flex items-center gap-4">
                     <div class="w-6 flex items-center justify-center">
-                        <x-heroicon-o-user class="w-5 h-5 text-gray-700 dark:text-gray-400" stroke-width="1.5" />
+                        <x-heroicon-o-user class="w-5 h-5 text-gray-700 dark:text-gray-300" stroke-width="1.5" />
                     </div>
-                    <div class="text-sm text-gray-700 dark:text-gray-300 font-sans tracking-wide">Created by: <span x-text="hoverCardData.creator"></span></div>
+                    <div class="text-sm text-gray-700 dark:text-gray-100 font-sans tracking-wide">Created by: <span x-text="hoverCardData.creator"></span></div>
                 </div>
             </div>
         </div>

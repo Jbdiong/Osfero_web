@@ -39,6 +39,11 @@ class ListCommissions extends ListRecords
                     return $query->where('type', 'design');
                 })
                 ->icon('heroicon-m-paint-brush'),
+            'video' => Tab::make('Video')
+                ->modifyQueryUsing(function (Builder $query) {
+                    return $query->where('type', 'video');
+                })
+                ->icon('heroicon-m-video-camera'),
             'ads_management' => Tab::make('Ads Management')
                 ->modifyQueryUsing(function (Builder $query) {
                     return $query->where('type', 'ads_management');
