@@ -19,12 +19,16 @@ use Illuminate\Support\Collection;
 
 class User extends Authenticatable implements FilamentUser, HasTenants, HasName
 {
+    public const STATUS_ACTIVE = 1;
+    public const STATUS_SUSPENDED = 2;
+    public const STATUS_DELETED = 3;
+
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasApiTokens;
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return true;
+        return $this->status !== self::STATUS_DELETED;
     }
 
     /**
@@ -38,6 +42,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants, HasName
         'email',
         'password',
         'verification_code',
+        'status',
     ];
 
     protected $appends = [
@@ -81,7 +86,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants, HasName
     public function tenants()
     {
         return $this->belongsToMany(Tenant::class)
-            ->withPivot(['role_id', 'display_name'])
+            ->withPivot(['role_id', 'display_name', 'status'])
             ->withTimestamps();
     }
 
@@ -156,5 +161,21 @@ class User extends Authenticatable implements FilamentUser, HasTenants, HasName
             return $pivot?->display_name ?: $this->name;
         }
         return $this->name;
+    }
+
+    public function delete()
+    {
+        $this->update([
+            'status' => self::STATUS_DELETED,
+            'name' => 'deleted_user',
+            'email' => 'deleted_user_' . $this->id . '@osfero.com',
+        ]);
+
+        // Update all tenant associations to reflected the deleted status
+        $this->tenants()->updateExistingPivot($this->tenants->pluck('id')->toArray(), [
+            'status' => self::STATUS_DELETED
+        ]);
+
+        return true;
     }
 }

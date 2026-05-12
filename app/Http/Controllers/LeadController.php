@@ -171,13 +171,10 @@ class LeadController extends Controller
             'phone_number' => 'nullable|string|max:255', // Phone number
             'Industry' => 'nullable|string|max:255',
             'industry' => 'nullable|string|max:255',
-            'Manual_Industry' => 'nullable|string|max:255',
             'Source' => 'nullable|string|max:255',
             'source' => 'nullable|string|max:255',
-            'Manual_Source' => 'nullable|string|max:255',
             'Language' => 'nullable|string|max:255',
             'language' => 'nullable|string|max:255',
-            'Manual_Language' => 'nullable|string|max:255',
             'city_id' => 'nullable|exists:cities,id',
             'state_id' => 'nullable|exists:states,id',
             'country_id' => 'nullable|exists:countries,id',
@@ -318,13 +315,10 @@ class LeadController extends Controller
             'phone_number' => 'nullable|string|max:255',
             'Industry' => 'nullable|string|max:255',
             'industry' => 'nullable|string|max:255',
-            'Manual_Industry' => 'nullable|string|max:255',
             'Source' => 'nullable|string|max:255',
             'source' => 'nullable|string|max:255',
-            'Manual_Source' => 'nullable|string|max:255',
             'Language' => 'nullable|string|max:255',
             'language' => 'nullable|string|max:255',
-            'Manual_Language' => 'nullable|string|max:255',
             'City' => 'nullable|string|max:255',
             'State' => 'nullable|string|max:255',
             'Country' => 'nullable|string|max:255',
@@ -413,16 +407,13 @@ class LeadController extends Controller
 
         // Get leads by industry/category
         $leadsByCategory = Lead::where('tenant_id', $tenantId)
-            ->selectRaw('COALESCE(Industry, Manual_Industry) as category, COUNT(*) as total')
+            ->selectRaw('Industry as category, COUNT(*) as total')
             ->groupBy('category')
             ->get()
             ->map(function ($item) use ($tenantId) {
                 $relevant = Lead::where('tenant_id', $tenantId)
                     ->where('relevant', true)
-                    ->where(function ($q) use ($item) {
-                        $q->where('Industry', $item->category)
-                            ->orWhere('Manual_Industry', $item->category);
-                    })
+                    ->where('Industry', $item->category)
                     ->count();
 
                 return [
@@ -467,7 +458,7 @@ class LeadController extends Controller
         $location = implode(', ', $locationParts);
 
         // Determine source type
-        $source = $lead->Manual_Source ?? $lead->Source ?? 'Unknown';
+        $source = $lead->Source ?? 'Unknown';
         $sourceType = strtolower($source);
         $sourceType = str_replace([' ', '小红书'], ['', 'xiaohongshu'], $sourceType);
 
@@ -491,7 +482,7 @@ class LeadController extends Controller
             ],
             'shop_info' => [
                 'name' => $lead->Shop_Name,
-                'category' => $lead->Manual_Industry ?? $lead->Industry ?? 'Uncategorized',
+                'category' => $lead->Industry ?? 'Uncategorized',
             ],
             'location' => [
                 'address' => $lead->address_1 ?? '',
@@ -512,12 +503,12 @@ class LeadController extends Controller
             'State' => $lead->State ?? '',
             'City' => $lead->City ?? '',
             'Country' => $lead->Country ?? '',
-            'Industry' => $lead->Manual_Industry ?? $lead->Industry ?? '',
+            'Industry' => $lead->Industry ?? '',
             'Marketer' => $lead->marketer ? $lead->marketer->id : '',
             'Relevant' => $lead->relevant ? '1' : '0',
             'Source' => $source,
             'Remarks' => $lead->remarks ?? '',
-            'Language' => $lead->Manual_Language ?? $lead->Language ?? '',
+            'Language' => $lead->Language ?? '',
             'LastUpdateDate' => $lead->last_modified ? $lead->last_modified->toIso8601String() : $lead->updated_at->toIso8601String(),
             'lead_status' => $lead->status ? ['id' => $lead->status->id, 'status' => $lead->status->label] : null,
             'lead_payment' => $latestPayment && $latestPayment->status ? ['id' => $latestPayment->status->id, 'payment' => $latestPayment->status->label] : null,
@@ -539,7 +530,7 @@ class LeadController extends Controller
                 'city' => $lead->City,
                 'state' => $lead->State,
                 'country' => $lead->Country,
-                'language' => $lead->Manual_Language ?? $lead->Language,
+                'language' => $lead->Language,
                 'irrelevant_reason' => $lead->Irrelevant_reason,
                 'remarks' => $lead->remarks,
                 'marketer' => $lead->marketer ? [

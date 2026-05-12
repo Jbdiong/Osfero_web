@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Inventory;
 
-use App\Filament\Clusters\Inventory;
 use App\Models\Category;
 use App\Filament\Resources\Inventory\Category\RelationManagers\SubfoldersRelationManager;
 use App\Filament\Resources\Inventory\Category\RelationManagers\ItemsRelationManager;
@@ -22,12 +21,12 @@ use Illuminate\Support\Facades\Auth;
 class CategoryResource extends Resource
 {
     protected static ?string $model = Category::class;
-    protected static ?string $cluster = Inventory::class;
+    protected static ?string $navigationGroup = 'Inventory';
     protected static ?string $slug = 'folders';
     protected static ?string $navigationLabel = 'Folders';
     protected static ?string $modelLabel = 'Folder';
     protected static ?string $pluralModelLabel = 'Folders';
-    protected static ?string $navigationIcon = 'heroicon-o-folder';
+    protected static ?string $navigationIcon = null;
     protected static ?int $navigationSort = 3;
 
     public static function getEloquentQuery(): Builder

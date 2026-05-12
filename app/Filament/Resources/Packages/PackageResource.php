@@ -1,6 +1,5 @@
 <?php
 namespace App\Filament\Resources\Packages;
-use App\Filament\Clusters\CustomerCluster;
 use App\Filament\Resources\Packages\Pages;
 use App\Filament\Resources\Packages\RelationManagers;
 use App\Models\Package;
@@ -16,8 +15,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class PackageResource extends Resource
 {
     protected static ?string $model = Package::class;
-    protected static ?string $cluster = CustomerCluster::class;
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationGroup = 'Customers';
+    protected static ?string $navigationIcon = null;
     public static function form(Form $form): Form
     {
         return PackageForm::configure($form);

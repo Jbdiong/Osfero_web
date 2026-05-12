@@ -67,7 +67,7 @@ class Tenant extends Model
     public function users(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(User::class)
-            ->withPivot(['role_id', 'display_name'])
+            ->withPivot(['role_id', 'display_name', 'status'])
             ->withTimestamps();
     }
 

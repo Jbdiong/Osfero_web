@@ -4,7 +4,6 @@ namespace App\Filament\Resources\Customers;
 
 use App\Filament\Resources\Customers\Pages;
 use App\Filament\Resources\Customers\RelationManagers;
-use App\Filament\Clusters\CustomerCluster;
 use App\Models\Customer;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -20,10 +19,10 @@ class CustomerResource extends Resource
 {
     protected static ?string $model = Customer::class;
 
-    protected static ?string $cluster = CustomerCluster::class;
+    protected static ?string $navigationGroup = 'Customers';
 
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
+    protected static ?string $navigationIcon = null;
 
     public static function form(Form $form): Form
     {

@@ -18,7 +18,9 @@ class TenantResource extends Resource
 {
     protected static ?string $model = Tenant::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-key';
+    protected static ?string $navigationGroup = 'Settings';
+
+    protected static ?string $navigationIcon = null;
 
     protected static ?string $navigationLabel = 'Generate Code';
     protected static ?string $pluralModelLabel = 'Generate Code';

@@ -4,7 +4,6 @@ namespace App\Filament\Resources\Orders;
 
 use App\Filament\Resources\Orders\Pages;
 use App\Filament\Resources\Orders\RelationManagers;
-use App\Filament\Clusters\CustomerCluster;
 use App\Models\Order;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -19,8 +18,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class OrderResource extends Resource
 {
     protected static ?string $model = Order::class;
-    protected static ?string $cluster = CustomerCluster::class;
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationGroup = 'Customers';
+    protected static ?string $navigationIcon = null;
     public static function form(Form $form): Form
     {
         return OrderForm::configure($form);

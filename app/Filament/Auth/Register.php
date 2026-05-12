@@ -81,6 +81,7 @@ class Register extends BaseRegister
                             TextInput::make('invitation_code')
                                 ->label('Invitation Code')
                                 ->required()
+                                ->default(fn () => session('invite_code', ''))
                                 ->exists(table: Tenant::class, column: 'code')
                                 ->validationAttribute('invitation code')
                                 ->rule(function () {
@@ -150,7 +151,7 @@ class Register extends BaseRegister
         ]);
         
         // Clean up session
-        Session::forget(['registration_otp', 'registration_email']);
+        Session::forget(['registration_otp', 'registration_email', 'invite_code']);
 
         event(new Registered($user));
 

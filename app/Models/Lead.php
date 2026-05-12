@@ -15,12 +15,9 @@ class Lead extends Model
     protected $fillable = [
         'Shop_Name',
         'Industry',
-        'Manual_Industry',
         'last_modified',
         'Source',
-        'Manual_Source',
         'Language',
-        'Manual_Language',
         'City',
         'State',
         'Country',
@@ -89,5 +86,10 @@ class Lead extends Model
             'id',      // Local key on leads table
             'user_id'  // Local key on picables table
         )->where('picables.picable_type', self::class);
+    }
+
+    public function customer(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Customer::class);
     }
 }

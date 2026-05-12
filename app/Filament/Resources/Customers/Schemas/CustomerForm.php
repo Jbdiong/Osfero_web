@@ -35,6 +35,10 @@ class CustomerForm
                         Forms\Components\TextInput::make('name')
                             ->label('Contact Name')
                             ->maxLength(255),
+                        Forms\Components\TextInput::make('position')
+                            ->label('Position / Role')
+                            ->maxLength(255)
+                            ->default(null),
                         Forms\Components\TextInput::make('phone_number')
                             ->label('Phone Number')
                             ->required()
@@ -45,7 +49,7 @@ class CustomerForm
                         Forms\Components\Hidden::make('tenant_id')
                             ->default(fn () => auth()->user()->last_active_tenant_id),
                     ])
-                    ->columns(3)
+                    ->columns(4)
                     ->defaultItems(0)
                     ->addActionLabel('Add Phone Number')
                     ->columnSpanFull(),

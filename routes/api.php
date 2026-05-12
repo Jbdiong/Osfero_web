@@ -25,6 +25,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('/todolists/{id}', [TodolistController::class, 'destroy']);
         
         Route::post('/auth/switch-tenant', [AuthController::class, 'switchTenant']);
+        Route::delete('/auth/delete-account', [AuthController::class, 'deleteAccount']);
 
         Route::get('/events/staff', [TodoController::class, 'getStaff']);
 

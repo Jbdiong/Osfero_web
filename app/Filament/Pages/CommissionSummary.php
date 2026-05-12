@@ -14,7 +14,7 @@ class CommissionSummary extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon  = 'heroicon-o-chart-bar';
+    protected static ?string $navigationIcon  = null;
     protected static ?string $navigationLabel = 'Commission Summary';
     protected static ?string $navigationGroup = 'Commission';
     protected static ?int    $navigationSort  = 2;

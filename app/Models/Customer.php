@@ -13,6 +13,7 @@ class Customer extends Model
 
     protected $fillable = [
         'tenant_id',
+        'lead_id',
         'name',
         'email',
         'company',
@@ -21,6 +22,11 @@ class Customer extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function lead(): BelongsTo
+    {
+        return $this->belongsTo(Lead::class);
     }
 
     public function orders(): HasMany

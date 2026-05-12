@@ -18,7 +18,7 @@ class CommissionResource extends Resource
 {
     protected static ?string $model = CommissionEntry::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-banknotes';
+    protected static ?string $navigationIcon = null;
 
     protected static ?string $navigationLabel = 'My Entries';
 

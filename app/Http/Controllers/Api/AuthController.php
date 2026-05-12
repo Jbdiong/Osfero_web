@@ -29,10 +29,16 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password) || $user->status === User::STATUS_DELETED) {
             return response()->json([
                 'message' => 'Invalid credentials'
             ], 401);
+        }
+
+        if ($user->status === User::STATUS_SUSPENDED) {
+            return response()->json([
+                'message' => 'Your account has been suspended or deactivated.'
+            ], 403);
         }
 
         $token = $user->createToken($request->device_name ?? 'mobile-app')->plainTextToken;
@@ -164,6 +170,22 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Tenant switched successfully',
             'user' => $user->load('tenants')
+        ]);
+    }
+
+    public function deleteAccount(Request $request)
+    {
+        $user = $request->user();
+        
+        // This will call the overridden delete() method in the User model
+        // which sets status to 3, changes name/email, and cascades to tenants.
+        $user->delete();
+
+        // Revoke all tokens
+        $user->tokens()->delete();
+
+        return response()->json([
+            'message' => 'Account deleted successfully'
         ]);
     }
 }

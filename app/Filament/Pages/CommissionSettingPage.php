@@ -15,7 +15,7 @@ class CommissionSettingPage extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon    = 'heroicon-o-cog-6-tooth';
+    protected static ?string $navigationIcon    = null;
     protected static ?string $navigationLabel   = 'Commission Settings';
     protected static ?string $navigationGroup   = 'Commission';
     protected static ?int    $navigationSort    = 3;

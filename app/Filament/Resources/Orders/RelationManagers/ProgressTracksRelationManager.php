@@ -31,7 +31,25 @@ class ProgressTracksRelationManager extends RelationManager
                             ->required()
                             ->maxLength(255),
                         Forms\Components\Select::make('status_id')
-                            ->relationship('status', 'name', fn ($query) => $query->whereHas('parent', fn ($q) => $q->where('name', 'Event Status'))->orderBy('id'))
+                            ->relationship('status', 'name', fn ($query) => $query->whereHas('parent', fn ($q) => $q->where('name', 'Order Progress'))->orderBy('id'))
+                            ->searchable()
+                            ->preload()
+                            ->createOptionForm([
+                                Forms\Components\TextInput::make('name')->required()->label('New Status'),
+                            ])
+                            ->createOptionUsing(function (array $data) {
+                                $parent = \App\Models\Lookup::where('name', 'Order Progress')->first();
+                                if ($parent) {
+                                    $newStatus = \App\Models\Lookup::create([
+                                        'name' => $data['name'],
+                                        'label' => $data['name'],
+                                        'parent_id' => $parent->id,
+                                        'tenant_id' => auth()->user()->last_active_tenant_id ?? auth()->user()->tenant_id,
+                                    ]);
+                                    return $newStatus->id;
+                                }
+                                return null;
+                            })
                             ->default(request()->query('status_id'))
                             ->required(),
                         Forms\Components\DatePicker::make('completed_at')

@@ -9,7 +9,7 @@ export default defineConfig({
         host: '0.0.0.0', // Expose to LAN
         cors: true,
         hmr: {
-            host: '192.168.0.28',
+            host: '192.168.0.55',
         },
     },
     plugins: [

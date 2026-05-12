@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Privacy Policy - Osfero</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css'])
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -16,6 +16,15 @@
 <body class="antialiased">
     <div class="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8 bg-white shadow-sm my-8 rounded-xl border border-gray-100">
         <div class="prose prose-slate max-w-none">
+            <div class="mb-6">
+                <a href="{{ route('filament.admin.auth.login') }}" class="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800">
+                    <svg class="mr-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to Login
+                </a>
+            </div>
+            
             <h1 class="text-4xl font-bold mb-4 text-gray-900">Privacy Policy</h1>
             <p class="text-sm text-gray-500 mb-8">Last updated: {{ date('F d, Y') }}</p>
 
@@ -46,13 +55,18 @@
                     <li>Cookies and Usage Data</li>
                 </ul>
 
-                <h4 class="text-lg font-medium mb-1 text-gray-700">Usage Data</h4>
+                <h4 class="text-lg font-medium mb-1 text-gray-700">Usage Data & Push Notifications</h4>
                 <p class="mb-4">
                     We may also collect information that your browser sends whenever you visit our Service or when you access the Service by or through a mobile device ("Usage Data").
                     This Usage Data may include information such as your computer's Internet Protocol address (e.g. IP address), browser type, browser version, the pages of our Service that you visit, the time and date of your visit, the time spent on those pages, unique device identifiers and other diagnostic data.
                 </p>
                 <p class="mb-4">
-                    When you access the Service by or through a mobile device, this Usage Data may include information such as the type of mobile device you use, your mobile device unique ID, the IP address of your mobile device, your mobile operating system, the type of mobile Internet browser you use, unique device identifiers and other diagnostic data.
+                    When you access the Service by or through a mobile device, this Usage Data may include information such as the type of mobile device you use, your mobile device unique ID, the IP address of your mobile device, your mobile operating system, the type of mobile Internet browser you use, unique device identifiers (including Firebase Cloud Messaging tokens for push notifications), and other diagnostic data.
+                </p>
+
+                <h4 class="text-lg font-medium mb-1 text-gray-700">Client and CRM Data</h4>
+                <p class="mb-4">
+                    As a Customer Relationship Management (CRM) platform, you may input data about your own clients, leads, events, and business operations into Osfero. In this context, you act as the "Data Controller" for this information, and Osfero acts as the "Data Processor." We only host and process this data securely to provide the Service to you and do not use your CRM data for our own marketing purposes.
                 </p>
             </section>
 
@@ -96,14 +110,28 @@
             </section>
 
             <section class="mb-8">
-                <h2 class="text-2xl font-semibold mb-3 text-gray-800">5. Security of Data</h2>
+                <h2 class="text-2xl font-semibold mb-3 text-gray-800">5. Account and Data Deletion</h2>
+                <p class="mb-4">
+                    You have the right to request the deletion of your account and associated personal data at any time.
+                </p>
+                <ul class="list-disc pl-6 mb-4 space-y-1">
+                    <li><strong>In the Mobile App:</strong> You can delete your account by navigating to <strong>Settings &gt; Delete Account</strong>.</li>
+                    <li><strong>On the Website:</strong> You can request account deletion by navigating to your <strong>Manage Account</strong> page or by contacting our support team.</li>
+                </ul>
+                <p class="mb-4">
+                    When you choose to delete your account, your personal identifying information (such as your name and email) will be anonymized or permanently removed from our active databases, and your authentication access will be immediately revoked. Please note that certain data, such as historical CRM records (e.g., leads or events) associated with a workspace you belonged to, may be retained by the workspace owner as per their data retention policies, but it will no longer be linked to your personal identity.
+                </p>
+            </section>
+
+            <section class="mb-8">
+                <h2 class="text-2xl font-semibold mb-3 text-gray-800">6. Security of Data</h2>
                 <p class="mb-4">
                     The security of your data is important to us, but remember that no method of transmission over the Internet, or method of electronic storage is 100% secure. While we strive to use commercially acceptable means to protect your Personal Data, we cannot guarantee its absolute security.
                 </p>
             </section>
 
             <section class="mb-8">
-                <h2 class="text-2xl font-semibold mb-3 text-gray-800">6. Service Providers</h2>
+                <h2 class="text-2xl font-semibold mb-3 text-gray-800">7. Service Providers</h2>
                 <p class="mb-4">
                     We may employ third party companies and individuals to facilitate our Service ("Service Providers"), to provide the Service on our behalf, to perform Service-related services or to assist us in analyzing how our Service is used.
                 </p>
@@ -113,7 +141,7 @@
             </section>
 
             <section class="mb-8">
-                <h2 class="text-2xl font-semibold mb-3 text-gray-800">7. Links to Other Sites</h2>
+                <h2 class="text-2xl font-semibold mb-3 text-gray-800">8. Links to Other Sites</h2>
                 <p class="mb-4">
                     Our Service may contain links to other sites that are not operated by us. If you click on a third party link, you will be directed to that third party's site. We strongly advise you to review the Privacy Policy of every site you visit.
                 </p>
@@ -123,7 +151,7 @@
             </section>
 
             <section class="mb-8">
-                <h2 class="text-2xl font-semibold mb-3 text-gray-800">8. Children's Privacy</h2>
+                <h2 class="text-2xl font-semibold mb-3 text-gray-800">9. Children's Privacy</h2>
                 <p class="mb-4">
                     Our Service does not address anyone under the age of 18 ("Children").
                 </p>
@@ -133,7 +161,7 @@
             </section>
 
             <section class="mb-8">
-                <h2 class="text-2xl font-semibold mb-3 text-gray-800">9. Changes to This Privacy Policy</h2>
+                <h2 class="text-2xl font-semibold mb-3 text-gray-800">10. Changes to This Privacy Policy</h2>
                 <p class="mb-4">
                     We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page.
                 </p>
@@ -146,7 +174,7 @@
             </section>
 
             <section class="mb-8">
-                <h2 class="text-2xl font-semibold mb-3 text-gray-800">10. Contact Us</h2>
+                <h2 class="text-2xl font-semibold mb-3 text-gray-800">11. Contact Us</h2>
                 <p class="mb-4">If you have any questions about this Privacy Policy, please contact us:</p>
                 <ul class="list-disc pl-6 mb-4 space-y-1">
                     <li>By email: <a href="mailto:support@osfero.com" class="text-blue-600 hover:underline">support@osfero.com</a></li>

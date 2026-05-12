@@ -47,3 +47,58 @@ Route::middleware(['web', 'auth'])->get('/calendar/customers', [
 Route::get('/legal/privacy-policy', function () {
     return view('privacy-policy');
 })->name('privacy-policy');
+
+// Public invite link - stores code in session and redirects to register
+Route::get('/invite/{code}', function (string $code) {
+    $tenant = \App\Models\Tenant::findByInvitationCode($code);
+
+    if (!$tenant) {
+        return redirect('/')->with('error', 'This invite link is invalid or has expired.');
+    }
+
+    session(['invite_code' => $code]);
+
+    return redirect(route('filament.admin.auth.register'));
+})->name('invite.register');
+
+// Helper: "Copy Invite Link" from tenant menu - generates code if needed, then copies
+Route::middleware(['web', 'auth'])->get('/tenant/{tenant}/invite-link', function (string $tenant) {
+    $tenantModel = \App\Models\Tenant::where('slug', $tenant)->firstOrFail();
+
+    // Auto-generate a fresh code if missing or expired
+    if (empty($tenantModel->code) || ($tenantModel->code_expiring && $tenantModel->code_expiring->isPast())) {
+        $tenantModel->generateInvitationCode();
+    }
+
+    $inviteUrl = url('/invite/' . $tenantModel->code);
+
+    // Redirect back to the panel with a flash notification containing the URL
+    return redirect(\Filament\Facades\Filament::getPanel()->getUrl($tenantModel))
+        ->with('invite_link_flash', $inviteUrl);
+})->name('tenant.invite.copy');
+
+
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/auth/reactivate', function () {
+        if (\Illuminate\Support\Facades\Auth::user()->status != 2) {
+            return redirect('/');
+        }
+        return view('auth.reactivate');
+    })->name('reactivate.prompt');
+
+    Route::post('/auth/reactivate', function () {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if ($user->status != 2) {
+            return redirect('/');
+        }
+        $user->update(['status' => 1]);
+        return redirect('/');
+    })->name('reactivate.process');
+
+    Route::post('/auth/reactivate/cancel', function () {
+        \Illuminate\Support\Facades\Auth::logout();
+        session()->invalidate();
+        session()->regenerateToken();
+        return redirect('/');
+    })->name('reactivate.cancel');
+});
