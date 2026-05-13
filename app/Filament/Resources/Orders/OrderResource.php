@@ -18,8 +18,9 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class OrderResource extends Resource
 {
     protected static ?string $model = Order::class;
-    protected static ?string $navigationGroup = 'Customers';
+    protected static ?string $navigationGroup = 'Sales';
     protected static ?string $navigationIcon = null;
+    protected static ?int $navigationSort = 3;
     public static function form(Form $form): Form
     {
         return OrderForm::configure($form);

@@ -37,6 +37,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants, HasName
      * @var list<string>
      */
     protected $fillable = [
+        'role_id',
         'last_active_tenant_id',
         'name',
         'email',
@@ -102,8 +103,27 @@ class User extends Authenticatable implements FilamentUser, HasTenants, HasName
             ->withTimestamps();
     }
 
+    public function globalRole()
+    {
+        return $this->belongsTo(SystemRole::class, 'role_id');
+    }
+
+    public function isSuperadmin(): bool
+    {
+        if ($this->role_id === 1) {
+            return true;
+        }
+
+        $role = $this->role;
+        return $role && $role->role === 'Superadmin';
+    }
+
     public function getRoleAttribute()
     {
+        if ($this->role_id) {
+            return SystemRole::find($this->role_id);
+        }
+
         $tenantId = Filament::getTenant()?->id ?? $this->last_active_tenant_id;
         
         if (!$tenantId) return null;
@@ -145,11 +165,17 @@ class User extends Authenticatable implements FilamentUser, HasTenants, HasName
 
     public function getTenants(Panel $panel): Collection
     {
+        if ($this->isSuperadmin()) {
+            return Tenant::all();
+        }
         return $this->tenants;
     }
 
     public function canAccessTenant(Model $tenant): bool
     {
+        if ($this->isSuperadmin()) {
+            return true;
+        }
         return $this->tenants->contains($tenant);
     }
 

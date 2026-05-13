@@ -68,6 +68,13 @@ class LeadsTable
                         ]);
                         
                         $record->phones()->update(['customer_id' => $customer->id]);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Converted to customer successfully')
+                            ->success()
+                            ->send();
+
+                        return redirect(\App\Filament\Resources\Customers\CustomerResource::getUrl('edit', ['record' => $customer]));
                     })
                     ->hidden(fn ($record) => $record->customer !== null),
             ])

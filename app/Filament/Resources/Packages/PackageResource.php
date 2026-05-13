@@ -15,8 +15,9 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class PackageResource extends Resource
 {
     protected static ?string $model = Package::class;
-    protected static ?string $navigationGroup = 'Customers';
+    protected static ?string $navigationGroup = 'Sales';
     protected static ?string $navigationIcon = null;
+    protected static ?int $navigationSort = 4;
     public static function form(Form $form): Form
     {
         return PackageForm::configure($form);

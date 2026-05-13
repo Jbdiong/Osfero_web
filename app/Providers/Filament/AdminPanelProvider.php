@@ -68,8 +68,8 @@ class AdminPanelProvider extends PanelProvider
                     ->url(fn (): string => \App\Filament\Pages\JoinWorkspace::getUrl()),
             ])
             ->navigationGroups([
-                NavigationGroup::make('Customers')
-                    ->icon('heroicon-o-user-group'),
+                NavigationGroup::make('Sales')
+                    ->icon('heroicon-o-briefcase'),
                 NavigationGroup::make('Inventory')
                     ->icon('heroicon-o-archive-box'),
                 NavigationGroup::make('Settings')

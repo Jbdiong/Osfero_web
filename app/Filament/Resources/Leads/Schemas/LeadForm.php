@@ -10,6 +10,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Group;
+use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use App\Models\Lookup;
@@ -241,9 +242,8 @@ class LeadForm
                         Textarea::make('remarks')
                             ->default(null)
                             ->columnSpanFull(),
-                        Select::make('tenant_id')
-                            ->relationship('tenant', 'name')
-                            ->required(),
+                        Forms\Components\Hidden::make('tenant_id')
+                            ->default(fn () => auth()->user()->last_active_tenant_id),
                     ]),
             ]);
     }

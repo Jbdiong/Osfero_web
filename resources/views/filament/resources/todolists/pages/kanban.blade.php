@@ -31,8 +31,8 @@
             <div class="flex justify-end pr-4 mb-2">
                 <div class="flex items-center cursor-pointer select-none" wire:click="toggleEveryone" wire:key="everyone-toggle-wrapper">
                     <span class="mr-3 text-sm font-medium text-gray-900 dark:text-gray-300">Show Everyone Todolist</span>
-                    <div class="relative w-12 h-5.5 flex items-center rounded-full p-1 transition-colors duration-200 {{ $viewEveryone ? 'bg-primary-600 justify-end' : 'bg-gray-300 dark:bg-gray-700 justify-start' }}">
-                        <div class="w-4 h-4 bg-white rounded-full shadow-sm ring-0 transition-all duration-200 ease-in-out"></div>
+                    <div class="fi-fo-toggle relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent outline-none transition-colors duration-200 ease-in-out {{ $viewEveryone ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700' }}">
+                        <span class="pointer-events-none absolute inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-all duration-200 ease-in-out" style="{{ $viewEveryone ? 'left: calc(100% - 1.25rem)' : 'left: 0rem' }}"></span>
                     </div>
                 </div>
             </div>

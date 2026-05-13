@@ -14,237 +14,134 @@ class LookupSeeder extends Seeder
     {
         $lookups = [];
 
-        // ========== GLOBAL LOOKUPS (tenant_id = null for system-wide sharing) ==========
-        
-        // Priority
-        $priorityParent = Lookup::create([
-            'name' => 'Priority',
-            'label' => 'Priority',
-            'parent_id' => null,
-            'tenant_id' => null, // Global - shared across all tenants
-        ]);
+        // ========== GROUP PARENTS (top-level) ==========
 
-        $priorities = ['Urgent', 'High', 'Normal', 'Low'];
-        foreach ($priorities as $priority) {
-            $lookups[] = [
-                'name' => $priority,
-                'label' => $priority,
-                'parent_id' => $priorityParent->id,
-                'tenant_id' => null, // Global
-            ];
+        $generalGroup = Lookup::firstOrCreate(['name' => 'General', 'parent_id' => null, 'tenant_id' => null], ['label' => 'General']);
+        $leadGroup    = Lookup::firstOrCreate(['name' => 'Lead',    'parent_id' => null, 'tenant_id' => null], ['label' => 'Lead']);
+        $orderGroup   = Lookup::firstOrCreate(['name' => 'Order',   'parent_id' => null, 'tenant_id' => null], ['label' => 'Order']);
+        $eventGroup   = Lookup::firstOrCreate(['name' => 'Event',   'parent_id' => null, 'tenant_id' => null], ['label' => 'Event']);
+        $renewalGroup = Lookup::firstOrCreate(['name' => 'Renewal', 'parent_id' => null, 'tenant_id' => null], ['label' => 'Renewal']);
+        $todoGroup    = Lookup::firstOrCreate(['name' => 'Todolist','parent_id' => null, 'tenant_id' => null], ['label' => 'Todolist']);
+
+        // ========== GENERAL (Priority + Audit Type) ==========
+
+        $priorityParent = Lookup::firstOrCreate(
+            ['name' => 'Priority', 'parent_id' => $generalGroup->id, 'tenant_id' => null],
+            ['label' => 'Priority']
+        );
+        foreach (['Urgent', 'High', 'Normal', 'Low'] as $v) {
+            $lookups[] = ['name' => $v, 'label' => $v, 'parent_id' => $priorityParent->id, 'tenant_id' => null];
         }
 
-        // Audit Type
-        $auditTypeParent = Lookup::create([
-            'name' => 'Audit Type',
-            'label' => 'Audit Type',
-            'parent_id' => null,
-            'tenant_id' => null, // Global
-        ]);
-
-        $auditTypes = ['Login', 'LogOut', 'Create', 'Update', 'Completed', 'Delete'];
-        foreach ($auditTypes as $auditType) {
-            $lookups[] = [
-                'name' => $auditType,
-                'label' => $auditType,
-                'parent_id' => $auditTypeParent->id,
-                'tenant_id' => null, // Global
-            ];
+        $auditTypeParent = Lookup::firstOrCreate(
+            ['name' => 'Audit Type', 'parent_id' => $generalGroup->id, 'tenant_id' => null],
+            ['label' => 'Audit Type']
+        );
+        foreach (['Login', 'LogOut', 'Create', 'Update', 'Completed', 'Delete'] as $v) {
+            $lookups[] = ['name' => $v, 'label' => $v, 'parent_id' => $auditTypeParent->id, 'tenant_id' => null];
         }
 
-        // ========== LEAD LOOKUPS ==========
-        
-        // Lead Payment
-        $leadPaymentParent = Lookup::create([
-            'name' => 'Lead Payment',
-            'label' => 'Lead Payment',
-            'parent_id' => null,
-            'tenant_id' => null, // Global
-        ]);
+        // ========== LEAD ==========
 
-        $leadPayments = ['None', 'Pending', 'Completed', 'Rejected'];
-        foreach ($leadPayments as $payment) {
-            $lookups[] = [
-                'name' => $payment,
-                'label' => $payment,
-                'parent_id' => $leadPaymentParent->id,
-                'tenant_id' => null, // Global
-            ];
+        $leadPaymentParent = Lookup::firstOrCreate(
+            ['name' => 'Lead Payment', 'parent_id' => $leadGroup->id, 'tenant_id' => null],
+            ['label' => 'Lead Payment']
+        );
+        foreach (['None', 'Pending', 'Completed', 'Rejected'] as $v) {
+            $lookups[] = ['name' => $v, 'label' => $v, 'parent_id' => $leadPaymentParent->id, 'tenant_id' => null];
         }
 
-        // Lead Status
-        $leadStatusParent = Lookup::create([
-            'name' => 'Lead Status',
-            'label' => 'Lead Status',
-            'parent_id' => null,
-            'tenant_id' => null, // Global
-        ]);
-
-        $leadStatuses = ['In Progress', 'Rejected', 'Scheduled Meeting', 'Completed', 'Pending Renewal'];
-        foreach ($leadStatuses as $status) {
-            $lookups[] = [
-                'name' => $status,
-                'label' => $status,
-                'parent_id' => $leadStatusParent->id,
-                'tenant_id' => null, // Global
-            ];
+        $leadStatusParent = Lookup::firstOrCreate(
+            ['name' => 'Lead Status', 'parent_id' => $leadGroup->id, 'tenant_id' => null],
+            ['label' => 'Lead Status']
+        );
+        foreach (['In Progress', 'Rejected', 'Scheduled Meeting', 'Completed', 'Pending Renewal'] as $v) {
+            $lookups[] = ['name' => $v, 'label' => $v, 'parent_id' => $leadStatusParent->id, 'tenant_id' => null];
         }
 
-        // Lead Relevant
-        $leadRelevantParent = Lookup::create([
-            'name' => 'Lead Relevant',
-            'label' => 'Lead Relevant',
-            'parent_id' => null,
-            'tenant_id' => null, // Global
-        ]);
-
-        $leadRelevants = ['Relevant', 'Irrelevant'];
-        foreach ($leadRelevants as $relevant) {
-            $lookups[] = [
-                'name' => $relevant,
-                'label' => $relevant,
-                'parent_id' => $leadRelevantParent->id,
-                'tenant_id' => null, // Global
-            ];
+        $leadRelevantParent = Lookup::firstOrCreate(
+            ['name' => 'Lead Relevant', 'parent_id' => $leadGroup->id, 'tenant_id' => null],
+            ['label' => 'Lead Relevant']
+        );
+        foreach (['Relevant', 'Irrelevant'] as $v) {
+            $lookups[] = ['name' => $v, 'label' => $v, 'parent_id' => $leadRelevantParent->id, 'tenant_id' => null];
         }
 
-        // Lead Source
-        $leadSourceParent = Lookup::create([
-            'name' => 'Lead Source',
-            'label' => 'Lead Source',
-            'parent_id' => null,
-            'tenant_id' => null, // Global
-        ]);
-
-        $leadSources = ['xhs', 'Facebook', 'Instagram', 'Others'];
-        foreach ($leadSources as $source) {
-            $lookups[] = [
-                'name' => $source,
-                'label' => $source,
-                'parent_id' => $leadSourceParent->id,
-                'tenant_id' => null, // Global
-            ];
+        $leadSourceParent = Lookup::firstOrCreate(
+            ['name' => 'Lead Source', 'parent_id' => $leadGroup->id, 'tenant_id' => null],
+            ['label' => 'Lead Source']
+        );
+        foreach (['xhs', 'Facebook', 'Instagram', 'Others'] as $v) {
+            $lookups[] = ['name' => $v, 'label' => $v, 'parent_id' => $leadSourceParent->id, 'tenant_id' => null];
         }
 
-        // Lead Language
-        $leadLanguageParent = Lookup::create([
-            'name' => 'Lead Language',
-            'label' => 'Lead Language',
-            'parent_id' => null,
-            'tenant_id' => null, // Global
-        ]);
-
-        $leadLanguages = ['English', 'Chinese', 'Malay', 'Others'];
-        foreach ($leadLanguages as $language) {
-            $lookups[] = [
-                'name' => $language,
-                'label' => $language,
-                'parent_id' => $leadLanguageParent->id,
-                'tenant_id' => null, // Global
-            ];
+        $leadLanguageParent = Lookup::firstOrCreate(
+            ['name' => 'Lead Language', 'parent_id' => $leadGroup->id, 'tenant_id' => null],
+            ['label' => 'Lead Language']
+        );
+        foreach (['English', 'Chinese', 'Malay', 'Others'] as $v) {
+            $lookups[] = ['name' => $v, 'label' => $v, 'parent_id' => $leadLanguageParent->id, 'tenant_id' => null];
         }
 
-        // Lead Irrelevant Reason
-        $leadIrrelevantReasonParent = Lookup::create([
-            'name' => 'Lead Irrelevant Reason',
-            'label' => 'Lead Irrelevant Reason',
-            'parent_id' => null,
-            'tenant_id' => null, // Global
-        ]);
-
-        $leadIrrelevantReasons = ['Price', 'Missing in Action'];
-        foreach ($leadIrrelevantReasons as $reason) {
-            $lookups[] = [
-                'name' => $reason,
-                'label' => $reason,
-                'parent_id' => $leadIrrelevantReasonParent->id,
-                'tenant_id' => null, // Global
-            ];
+        $leadIrrelevantReasonParent = Lookup::firstOrCreate(
+            ['name' => 'Lead Irrelevant Reason', 'parent_id' => $leadGroup->id, 'tenant_id' => null],
+            ['label' => 'Lead Irrelevant Reason']
+        );
+        foreach (['Price', 'Missing in Action'] as $v) {
+            $lookups[] = ['name' => $v, 'label' => $v, 'parent_id' => $leadIrrelevantReasonParent->id, 'tenant_id' => null];
         }
 
-        // Lead Industry
-        $leadIndustryParent = Lookup::create([
-            'name' => 'Lead Industry',
-            'label' => 'Lead Industry',
-            'parent_id' => null,
-            'tenant_id' => null, // Global
-        ]);
-
-        $leadIndustries = ['Beauty', 'Car', 'Wellness', 'Others'];
-        foreach ($leadIndustries as $industry) {
-            $lookups[] = [
-                'name' => $industry,
-                'label' => $industry,
-                'parent_id' => $leadIndustryParent->id,
-                'tenant_id' => null, // Global
-            ];
+        $leadIndustryParent = Lookup::firstOrCreate(
+            ['name' => 'Lead Industry', 'parent_id' => $leadGroup->id, 'tenant_id' => null],
+            ['label' => 'Lead Industry']
+        );
+        foreach (['Beauty', 'Car', 'Wellness', 'Others'] as $v) {
+            $lookups[] = ['name' => $v, 'label' => $v, 'parent_id' => $leadIndustryParent->id, 'tenant_id' => null];
         }
 
-        // ========== TODOLIST LOOKUPS ==========
-        
-        // Todolist Status
-        $todolistStatusParent = Lookup::firstOrCreate([
-            'name' => 'Todolist Status',
-        ], [
-            'label' => 'Todolist Status',
-            'parent_id' => null,
-            'tenant_id' => null,
-        ]);
-        
-        $todolistStatuses = ['Waiting List', 'To do', 'In Progress', 'Pending', 'Completed'];
-        foreach ($todolistStatuses as $status) {
-            Lookup::firstOrCreate([
-                'name' => $status,
-                'parent_id' => $todolistStatusParent->id,
-                'tenant_id' => null,
-            ], [
-                'label' => $status,
-            ]);
+        // ========== ORDER ==========
+
+        $orderProgressParent = Lookup::firstOrCreate(
+            ['name' => 'Order Progress', 'parent_id' => $orderGroup->id, 'tenant_id' => null],
+            ['label' => 'Order Progress']
+        );
+
+        // ========== TODOLIST ==========
+
+        $todolistStatusParent = Lookup::firstOrCreate(
+            ['name' => 'Todolist Status', 'parent_id' => $todoGroup->id, 'tenant_id' => null],
+            ['label' => 'Todolist Status']
+        );
+        foreach (['Waiting List', 'To do', 'In Progress', 'Pending', 'Completed'] as $v) {
+            Lookup::firstOrCreate(
+                ['name' => $v, 'parent_id' => $todolistStatusParent->id, 'tenant_id' => null],
+                ['label' => $v]
+            );
         }
 
-        // ========== EVENT LOOKUPS ==========
-        
-        // Event Status
-        $eventStatusParent = Lookup::create([
-            'name' => 'Event Status',
-            'label' => 'Event Status',
-            'parent_id' => null,
-            'tenant_id' => null, // Global
-        ]);
+        // ========== EVENT ==========
 
-        $eventStatuses = ['Completed', 'Not Yet'];
-        foreach ($eventStatuses as $status) {
-            $lookups[] = [
-                'name' => $status,
-                'label' => $status,
-                'parent_id' => $eventStatusParent->id,
-                'tenant_id' => null, // Global
-            ];
+        $eventStatusParent = Lookup::firstOrCreate(
+            ['name' => 'Event Status', 'parent_id' => $eventGroup->id, 'tenant_id' => null],
+            ['label' => 'Event Status']
+        );
+        foreach (['Completed', 'Not Yet'] as $v) {
+            $lookups[] = ['name' => $v, 'label' => $v, 'parent_id' => $eventStatusParent->id, 'tenant_id' => null];
         }
 
-        // ========== RENEWAL LOOKUPS ==========
-        
-        // Renewal Status
-        $renewalStatusParent = Lookup::create([
-            'name' => 'Renewal Status',
-            'label' => 'Renewal Status',
-            'parent_id' => null,
-            'tenant_id' => null, // Global
-        ]);
+        // ========== RENEWAL ==========
 
-        $renewalStatuses = ['Pending Renewal', 'Followed Up', 'On Going', 'Ended'];
-        foreach ($renewalStatuses as $status) {
-            $lookups[] = [
-                'name' => $status,
-                'label' => $status,
-                'parent_id' => $renewalStatusParent->id,
-                'tenant_id' => null, // Global
-            ];
+        $renewalStatusParent = Lookup::firstOrCreate(
+            ['name' => 'Renewal Status', 'parent_id' => $renewalGroup->id, 'tenant_id' => null],
+            ['label' => 'Renewal Status']
+        );
+        foreach (['Pending Renewal', 'Followed Up', 'On Going', 'Ended'] as $v) {
+            $lookups[] = ['name' => $v, 'label' => $v, 'parent_id' => $renewalStatusParent->id, 'tenant_id' => null];
         }
 
         // Insert all child lookups
         Lookup::insert($lookups);
 
-        $this->command->info('Global lookups seeded successfully! (tenant_id = null for system-wide sharing)');
+        $this->command->info('Global lookups seeded successfully with group hierarchy!');
     }
 }
