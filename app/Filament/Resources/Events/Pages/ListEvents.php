@@ -137,16 +137,18 @@ class ListEvents extends ListRecords
                 ->get()
                 ->map(function ($event) {
                 return [
-                    'id'          => $event->id,
-                    'title'       => $event->title,
-                    'start'       => $event->start_time,
-                    'end'         => $event->end_time,
-                    'allDay'      => (bool)$event->all_day,
-                    'color'       => 'blue',
-                    'customer_id' => $event->customer_id,
-                    'description' => $event->description,
+                    'id'            => $event->id,
+                    'title'         => $event->title,
+                    'start'         => $event->start_time,
+                    'end'           => $event->end_time,
+                    'allDay'        => (bool)$event->all_day,
+                    'color'         => 'blue',
+                    'customer_id'   => $event->customer_id,
+                    'event_type_id' => $event->event_type_id,
+                    'description'   => $event->description,
                 ];
             }),
+            'event_types' => $this->getEventTypes($tenantId),
             'upcoming_deadline' => $upcomingDeadlineData ?: null,
             'overdue_renewals' => $renewals,
             'calendar_renewals' => $calendarRenewals,
@@ -156,6 +158,12 @@ class ListEvents extends ListRecords
                 ->get(['id', 'name', 'company'])
                 ->map(fn($c) => ['id' => $c->id, 'label' => $c->name . ($c->company ? ' (' . $c->company . ')' : '')])
                 ->values(),
+            'category_colors' => [
+                'events' => \App\Models\Lookup::where('name', 'Event')->whereNull('parent_id')->value('color') ?? '#ff6700',
+                'todolist' => \App\Models\Lookup::where('name', 'Todolist')->whereNull('parent_id')->value('color') ?? '#3b82f6',
+                'renewals' => \App\Models\Lookup::where('name', 'Renewal')->whereNull('parent_id')->value('color') ?? '#ef4444',
+                'holidays' => '#008002',
+            ],
             'tenant_id' => $tenantId,
         ];
     }
@@ -174,13 +182,14 @@ class ListEvents extends ListRecords
         $user = auth()->user();
         $tenantId = $user->tenant_id;
         $event = \App\Models\Event::create([
-            'title'       => $data['title'],
-            'description' => $data['description'] ?? null,
-            'start_time'  => $data['start_time'],
-            'end_time'    => $data['end_time'],
-            'customer_id' => $data['customer_id'] ?? null,
-            'all_day'     => $data['all_day'] ?? false,
-            'tenant_id'   => $tenantId,
+            'title'         => $data['title'],
+            'description'   => $data['description'] ?? null,
+            'start_time'    => $data['start_time'],
+            'end_time'      => $data['end_time'],
+            'customer_id'   => $data['customer_id'] ?? null,
+            'event_type_id' => $request->event_type_id,
+            'all_day'       => $data['all_day'] ?? false,
+            'tenant_id'     => $tenantId,
         ]);
 
         // Assign current user as PIC
@@ -198,6 +207,7 @@ class ListEvents extends ListRecords
                 'end'         => $event->end_time->toDateTimeString(),
                 'allDay'      => (bool)$event->all_day,
                 'customer_id' => $event->customer_id,
+                'event_type_id' => $event->event_type_id,
             ],
         ]);
     }
@@ -222,12 +232,13 @@ class ListEvents extends ListRecords
         ]);
 
         $event->update([
-            'title'       => $data['title'],
-            'description' => $data['description'] ?? null,
-            'start_time'  => $data['start_time'],
-            'end_time'    => $data['end_time'],
-            'customer_id' => $data['customer_id'] ?? null,
-            'all_day'     => $data['all_day'] ?? false,
+            'title'         => $data['title'],
+            'description'   => $data['description'] ?? null,
+            'start_time'    => $data['start_time'],
+            'end_time'      => $data['end_time'],
+            'customer_id'   => $data['customer_id'] ?? null,
+            'event_type_id' => $request->event_type_id,
+            'all_day'       => $data['all_day'] ?? false,
         ]);
 
         return response()->json([
@@ -240,8 +251,35 @@ class ListEvents extends ListRecords
                 'end'         => $event->end_time->toDateTimeString(),
                 'allDay'      => (bool)$event->all_day,
                 'customer_id' => $event->customer_id,
+                'event_type_id' => $event->event_type_id,
             ],
         ]);
+    }
+
+    protected function getEventTypes($tenantId)
+    {
+        $eventTypeParent = \App\Models\Lookup::where('name', 'Event Type')->first();
+        if (!$eventTypeParent) return collect();
+
+        $hiddenIds = \App\Models\HiddenTenantLookup::where('tenant_id', $tenantId)->pluck('lookup_id')->toArray();
+        return \App\Models\Lookup::where('parent_id', $eventTypeParent->id)
+            ->where(function($q) use ($tenantId) {
+                // Global/Tenant lookups (public)
+                $q->where(function($sq) use ($tenantId) {
+                    $sq->where(fn($ssq) => $ssq->whereNull('tenant_id')->orWhere('tenant_id', $tenantId))
+                        ->whereNull('user_id');
+                })
+                // User-specific lookups (private)
+                ->orWhere('user_id', auth()->id());
+            })
+            ->whereNotIn('id', $hiddenIds)
+            ->orderBy('sort_order')->orderBy('name')
+            ->get(['id', 'name', 'color']);
+    }
+
+    public function fetchEventTypes(): array
+    {
+        return $this->getEventTypes(auth()->user()->tenant_id)->toArray();
     }
 
     // DELETE handler — remove an event from the calendar modal
@@ -278,6 +316,47 @@ class ListEvents extends ListRecords
     {
         return [
             CreateAction::make(),
+            \Filament\Actions\Action::make('createEventType')
+                ->label('New Event Type')
+                ->color('gray')
+                ->icon('heroicon-m-plus')
+                ->form([
+                    \Filament\Forms\Components\TextInput::make('name')
+                        ->required()
+                        ->maxLength(255),
+                    \Filament\Forms\Components\ColorPicker::make('color')
+                        ->required(),
+                ])
+                ->action(function (array $data) {
+                    $tenantId = auth()->user()->tenant_id;
+                    $parent = \App\Models\Lookup::where('name', 'Event Type')->first();
+                    
+                    if (!$parent) {
+                        // Create parent if missing (shouldn't happen but safe)
+                        $eventGroup = \App\Models\Lookup::where('name', 'Event')->first();
+                        $parent = \App\Models\Lookup::create([
+                            'name' => 'Event Type',
+                            'label' => 'Event Type',
+                            'parent_id' => $eventGroup?->id,
+                        ]);
+                    }
+
+                    \App\Models\Lookup::create([
+                        'tenant_id' => $tenantId,
+                        'user_id' => auth()->id(),
+                        'name' => $data['name'],
+                        'label' => $data['name'],
+                        'color' => $data['color'],
+                        'parent_id' => $parent->id,
+                    ]);
+
+                    \Filament\Notifications\Notification::make()
+                        ->title('Event type created')
+                        ->success()
+                        ->send();
+                        
+                    $this->dispatch('refresh-event-types');
+                }),
         ];
     }
 }

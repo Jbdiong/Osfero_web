@@ -54,13 +54,16 @@
            No overflow:hidden so multi-day spanning events render correctly across cells. */
         .fc .fc-daygrid-day-frame { height: 110px; }
         
-        /* Filter Checkbox Colors */
-        .filter-events:checked { background-color: #ff6700 !important; border-color: #ff6700 !important; }
-        .filter-todolist:checked { background-color: #3b82f6 !important; border-color: #3b82f6 !important; }
-        .filter-renewals:checked { background-color: #ef4444 !important; border-color: #ef4444 !important; }
-        .filter-holidays:checked { background-color: #008002 !important; border-color: #008002 !important; }
-
         [x-cloak] { display: none !important; }
+        
+        /* Dynamic Checkbox Colors */
+        .custom-checkbox {
+            @apply transition-all cursor-pointer border-gray-300 dark:border-gray-700 !important;
+        }
+        .custom-checkbox:checked {
+            background-color: var(--checkbox-color) !important;
+            border-color: var(--checkbox-color) !important;
+        }
     </style>
 
     <div 
@@ -99,8 +102,11 @@
             calendarRenewals: @js($calendar_renewals ?? []),
             todolists: @js($todolists ?? []),
             customers: @js($customers ?? []),
+            eventTypes: @js($event_types ?? []),
+            categoryColors: @js($category_colors ?? []),
             tenantId: @js($tenant_id ?? null)
         })"
+                @refresh-event-types.window="refreshEventTypes()"
                 x-cloak
                 wire:ignore
             >
@@ -149,26 +155,56 @@
 
                 <!-- My Calendars (Filters) -->
                 <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-                    <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-4">My calendars</h3>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-medium text-gray-900 dark:text-white">My calendars</h3>
+                        <button 
+                            wire:click="mountAction('createEventType')"
+                            class="p-1 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                            title="Add event type"
+                        >
+                            <x-heroicon-m-plus class="w-4 h-4" />
+                        </button>
+                    </div>
                     <div class="space-y-3">
                         <label class="flex items-center gap-3 cursor-pointer group">
-                            <input type="checkbox" x-model="filters.events" @change="toggleSource('local-events', $event.target.checked)" 
-                                   class="filter-events w-4 h-4 rounded border-gray-300 transition-all cursor-pointer">
-                            <span class="text-sm font-medium text-gray-700 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Events</span>
+                            <input type="checkbox" x-model="filters.events" @change="refreshAllSources()" 
+                                   class="custom-checkbox w-4 h-4 rounded"
+                                   :style="`--checkbox-color: ${categoryColors.events}`">
+                            <span class="text-sm font-medium text-gray-700 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white transition-colors">All Events</span>
                         </label>
+
+                        <!-- Dynamic Event Types -->
+                        <template x-for="type in eventTypes" :key="type.id">
+                            <label class="flex items-center gap-3 cursor-pointer group">
+                                <input 
+                                    type="checkbox" 
+                                    x-model="filters.types[type.id]"
+                                    @change="refreshAllSources()"
+                                    class="custom-checkbox w-4 h-4 rounded"
+                                    :style="`--checkbox-color: ${type.color}`"
+                                >
+                                <span class="text-sm font-medium text-gray-700 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white transition-colors" x-text="type.name"></span>
+                            </label>
+                        </template>
+
+                        <div class="pt-2 border-t border-gray-100 dark:border-gray-800"></div>
+
                         <label class="flex items-center gap-3 cursor-pointer group">
-                            <input type="checkbox" x-model="filters.todolist" @change="toggleSource('todolist-events', $event.target.checked)" 
-                                   class="filter-todolist w-4 h-4 rounded border-gray-300 transition-all cursor-pointer">
+                            <input type="checkbox" x-model="filters.todolist" @change="refreshAllSources()" 
+                                   class="custom-checkbox w-4 h-4 rounded"
+                                   :style="`--checkbox-color: ${categoryColors.todolist}`">
                             <span class="text-sm font-medium text-gray-700 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white transition-colors">To-do Tasks</span>
                         </label>
                         <label class="flex items-center gap-3 cursor-pointer group">
-                            <input type="checkbox" x-model="filters.renewals" @change="toggleSource('renewal-events', $event.target.checked)" 
-                                   class="filter-renewals w-4 h-4 rounded border-gray-300 transition-all cursor-pointer">
+                            <input type="checkbox" x-model="filters.renewals" @change="refreshAllSources()" 
+                                   class="custom-checkbox w-4 h-4 rounded"
+                                   :style="`--checkbox-color: ${categoryColors.renewals}`">
                             <span class="text-sm font-medium text-gray-700 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Renewals</span>
                         </label>
                         <label class="flex items-center gap-3 cursor-pointer group">
-                            <input type="checkbox" x-model="filters.holidays" @change="toggleSource('google-holidays', $event.target.checked)" 
-                                   class="filter-holidays w-4 h-4 rounded border-gray-300 transition-all cursor-pointer">
+                            <input type="checkbox" x-model="filters.holidays" @change="refreshAllSources()" 
+                                   class="custom-checkbox w-4 h-4 rounded"
+                                   :style="`--checkbox-color: ${categoryColors.holidays}`">
                             <span class="text-sm font-medium text-gray-700 dark:text-white group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Holidays</span>
                         </label>
                     </div>
@@ -252,25 +288,6 @@
                             <span>New task</span>
                         </a>
 
-                        <!-- Legend -->
-                        <div class="flex items-center gap-4 px-4 py-2 bg-gray-50 dark:bg-gray-900 rounded-full border border-gray-100 dark:border-gray-700 mx-auto">
-                            <div class="flex items-center gap-2">
-                                <div class="w-2.5 h-2.5 rounded-full bg-[#008002] shadow-[0_0_0_2px_rgba(0,128,2,0.1)]"></div>
-                                <span class="text-xs font-medium text-gray-600 dark:text-white">Holidays</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-2.5 h-2.5 rounded-full bg-[#ff6700] shadow-[0_0_0_2px_rgba(255,103,0,0.1)]"></div>
-                                <span class="text-xs font-medium text-gray-600 dark:text-white">Events</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-2.5 h-2.5 rounded-full bg-[#3b82f6] shadow-[0_0_0_2px_rgba(59,130,246,0.1)]"></div>
-                                <span class="text-xs font-medium text-gray-600 dark:text-white">Todo List</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-2.5 h-2.5 rounded-full bg-[#ef4444] shadow-[0_0_0_2px_rgba(239,68,68,0.1)]"></div>
-                                <span class="text-xs font-medium text-gray-600 dark:text-white">Renewals</span>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Right: View Selector and Navigation -->
@@ -692,6 +709,21 @@
                             </div>
                         </div>
 
+                        <!-- Event Type -->
+                        <div class="flex items-center gap-4 group">
+                            <div class="w-6 flex justify-center text-gray-500">
+                                <x-heroicon-o-tag class="w-5 h-5" stroke-width="1.5" />
+                            </div>
+                            <div class="flex-1">
+                                <select x-model="eventForm.event_type_id" class="w-full !border-0 p-0 focus:ring-0 bg-transparent text-sm text-gray-700 dark:text-gray-300 placeholder:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded px-1 -mx-1 transition-colors">
+                                    <option value="">Select event type</option>
+                                    <template x-for="t in eventTypes" :key="t.id">
+                                        <option :value="t.id" x-text="t.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+
                         <!-- Customer (Guests) -->
                         <div class="flex items-center gap-4 group">
                             <div class="w-6 flex justify-center text-gray-500">
@@ -823,6 +855,7 @@
         </div>
 
     </template>
+    <x-filament-actions::modals />
 </div>
 </x-filament-panels::page>
 

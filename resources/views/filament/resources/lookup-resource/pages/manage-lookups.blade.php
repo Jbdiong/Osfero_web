@@ -142,9 +142,30 @@
                         </div>
                     @endforelse
 
+                    @php
+                        $selectedParent = $selectedParentId ? \App\Models\Lookup::find($selectedParentId) : null;
+                        $tenantId = \Filament\Facades\Filament::getTenant()?->id;
+                        
+                        $showAddButton = true;
+                        if ($selectedParent && $selectedParent->name === 'Todolist Status') {
+                            $hiddenIds = \App\Models\HiddenTenantLookup::where('tenant_id', $tenantId)->pluck('lookup_id')->toArray();
+                            $count = \App\Models\Lookup::where('parent_id', $selectedParent->id)
+                                ->where(function($q) use ($tenantId) {
+                                    $q->whereNull('tenant_id')->orWhere('tenant_id', $tenantId);
+                                })
+                                ->whereNotIn('id', $hiddenIds)
+                                ->count();
+                            
+                            if ($count >= 5) {
+                                $showAddButton = false;
+                            }
+                        }
+                    @endphp
+                    @if($showAddButton)
                     <div class="pt-2 px-1">
                         {{ $this->addSubCategoryAction }}
                     </div>
+                    @endif
                 </div>
             @else
                 <div class="px-6 py-16 text-center bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">

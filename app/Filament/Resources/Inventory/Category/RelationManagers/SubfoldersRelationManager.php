@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Inventory\Category\RelationManagers;
 
 use App\Models\Category;
+use App\Filament\Resources\Inventory\CategoryResource;
+
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -56,7 +58,7 @@ class SubfoldersRelationManager extends RelationManager
             ])
             ->actions([
                 ViewAction::make()
-                    ->url(fn (Category $record): string => route('filament.admin.resources.folders.view', ['record' => $record])),
+                    ->url(fn (Category $record): string => CategoryResource::getUrl('view', ['record' => $record])),
                 EditAction::make(),
                 DeleteAction::make(),
             ])

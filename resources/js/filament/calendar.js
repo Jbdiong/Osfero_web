@@ -22,6 +22,8 @@ const filamentCalendarFactory = ({
     overdueRenewals = [],
     calendarRenewals = [],
     customers = [],
+    eventTypes = [],
+    categoryColors = {},
     tenantId = null
 }) => ({
     // --- Main Calendar State ---
@@ -36,15 +38,23 @@ const filamentCalendarFactory = ({
 
     filters: {
         events: true,
+        types: {}, // { typeId: boolean }
         todolist: true,
         renewals: true,
         holidays: true
     },
 
+    // Raw data for re-filtering
+    rawEvents: [],
+    rawTodolists: [],
+    rawRenewals: [],
+
     // --- Sidebar Data ---
     upcomingDeadline: upcomingDeadline || { title: null, more: null, countdown: null },
     sidebarRenewals: overdueRenewals || [],
     customers: customers || [],
+    eventTypes: eventTypes || [],
+    categoryColors: categoryColors || {},
     tenantId: tenantId || null,
 
     // --- Modals State ---
@@ -89,6 +99,7 @@ const filamentCalendarFactory = ({
         end: null,
         allDay: true,
         customer_id: '',
+        event_type_id: '',
         description: '',
         saving: false,
         error: ''
@@ -188,10 +199,18 @@ const filamentCalendarFactory = ({
         this.selectedDate = initialDate ? new Date(initialDate) : new Date();
         this.currentDate = new Date(this.selectedDate);
 
-        this.events = events || [];
-        this.processEvents(this.events);
-        this.processTodolists(todolists);
-        this.processRenewals(calendarRenewals);
+        this.rawEvents = events || [];
+        this.rawTodolists = todolists || [];
+        this.rawRenewals = calendarRenewals || [];
+
+        // Initialize filters for all event types to true
+        this.eventTypes.forEach(t => {
+            this.filters.types[t.id] = true;
+        });
+
+        this.processEvents(this.rawEvents);
+        this.processTodolists(this.rawTodolists);
+        this.processRenewals(this.rawRenewals);
 
         // Delay initialization to ensure DOM is ready and styled
         setTimeout(() => {
@@ -222,12 +241,46 @@ const filamentCalendarFactory = ({
     // =================================================================================================
     // CALENDAR LOGIC
     // =================================================================================================
+    refreshAllSources() {
+        if (!this.calendar) return;
+        this.processEvents(this.rawEvents);
+        this.processTodolists(this.rawTodolists);
+        this.processRenewals(this.rawRenewals);
+        
+        // Handle holidays specially as it's a built-in source
+        this.toggleSource('google-holidays', this.filters.holidays);
+    },
+
+    async refreshEventTypes() {
+        if (!this.$wire) return;
+        try {
+            const types = await this.$wire.fetchEventTypes();
+            this.eventTypes = types || [];
+            
+            // Initialize filters for any new types
+            this.eventTypes.forEach(t => {
+                if (typeof this.filters.types[t.id] === 'undefined') {
+                    this.filters.types[t.id] = true;
+                }
+            });
+            
+            // Refresh display in case colors changed or new types added
+            this.processEvents(this.rawEvents);
+        } catch (e) {
+            console.error('Failed to refresh event types', e);
+        }
+    },
+
     processEvents(rawEvents) {
         if (!rawEvents) return;
         const eventDate = new Date(this.selectedDate);
         const dateStr = eventDate.toISOString().split('T')[0];
 
-        this.fullCalendarEvents = rawEvents.map(event => {
+        this.fullCalendarEvents = rawEvents.filter(event => {
+            if (!this.filters.events) return false;
+            if (event.event_type_id && this.filters.types[event.event_type_id] === false) return false;
+            return true;
+        }).map(event => {
             const start = new Date(event.start);
             const end = new Date(event.end || event.start);
 
@@ -253,15 +306,29 @@ const filamentCalendarFactory = ({
                 displayEnd = `${year}-${month}-${day}`;
             }
 
+            // Apply custom color from event type
+            let bgColor = '#ffd7b5';
+            let borderColor = '#ff6700';
+            let textColor = '#000000';
+
+            if (event.event_type_id) {
+                const type = this.eventTypes.find(t => String(t.id) === String(event.event_type_id));
+                if (type && type.color) {
+                    borderColor = type.color;
+                    bgColor = type.color + '33'; // ~20% opacity
+                    // If color is dark, maybe white text? For now stick to black as design is light
+                }
+            }
+
             return {
                 id: event.id.toString(),
                 title: event.title,
                 start: event.start,
                 end: displayEnd,
                 allDay: displayAllDay,
-                backgroundColor: '#ffd7b5',
-                borderColor: '#ff6700',
-                textColor: '#000000',
+                backgroundColor: bgColor,
+                borderColor: borderColor,
+                textColor: textColor,
                 extendedProps: {
                     ...event,
                     isMultiDayTimed: isMultiDayTimed,
@@ -289,7 +356,7 @@ const filamentCalendarFactory = ({
     processTodolists(rawTodolists) {
         if (!rawTodolists) return;
 
-        this.fullCalendarTodolists = rawTodolists.map(task => ({
+        this.fullCalendarTodolists = rawTodolists.filter(task => this.filters.todolist).map(task => ({
             id: task.id.toString(),
             title: task.title,
             start: task.start,
@@ -315,7 +382,7 @@ const filamentCalendarFactory = ({
     processRenewals(rawRenewals) {
         if (!rawRenewals) return;
 
-        this.fullCalendarRenewals = rawRenewals.map(renewal => ({
+        this.fullCalendarRenewals = rawRenewals.filter(r => this.filters.renewals).map(renewal => ({
             id: renewal.id.toString(),
             title: renewal.title,
             start: renewal.start,
@@ -640,6 +707,7 @@ const filamentCalendarFactory = ({
             end: allDay ? new Date(end.getTime() - 24 * 60 * 60 * 1000) : end,
             allDay: allDay,
             customer_id: '',
+            event_type_id: '',
             description: '',
             saving: false,
             error: ''
@@ -694,6 +762,7 @@ const filamentCalendarFactory = ({
             end: ev.extendedProps?.realEnd ? new Date(ev.extendedProps.realEnd) : (ev.end || ev.start),
             allDay: !!ev.extendedProps?.all_day, // Use the real status from DB, not the display status
             customer_id: ev.extendedProps?.customer_id || '',
+            event_type_id: ev.extendedProps?.event_type_id || '',
             description: ev.extendedProps?.description || '',
             saving: false,
             error: ''
@@ -765,19 +834,20 @@ const filamentCalendarFactory = ({
                     start_time: toISO(startTime),
                     end_time: toISO(endTime),
                     customer_id: this.eventForm.customer_id || null,
+                    event_type_id: this.eventForm.event_type_id || null,
                     all_day: this.eventForm.allDay ? 1 : 0,
                 });
                 if (response.data.success) {
                     ev = response.data.event;
 
                     // Update local data cache
-                    const idx = this.events.findIndex(e => String(e.id) === String(ev.id));
+                    const idx = this.rawEvents.findIndex(e => String(e.id) === String(ev.id));
                     if (idx !== -1) {
-                        this.events[idx] = ev;
+                        this.rawEvents[idx] = ev;
                     }
 
                     // Re-process all events to update calendar display
-                    this.processEvents(this.events);
+                    this.processEvents(this.rawEvents);
                     this.closeEventModal();
                 }
             } else {
@@ -788,16 +858,17 @@ const filamentCalendarFactory = ({
                     start_time: toISO(startTime),
                     end_time: toISO(endTime),
                     customer_id: this.eventForm.customer_id || null,
+                    event_type_id: this.eventForm.event_type_id || null,
                     all_day: this.eventForm.allDay ? 1 : 0,
                 });
                 if (response.data.success) {
                     ev = response.data.event;
 
                     // Add to local data cache
-                    this.events.push(ev);
+                    this.rawEvents.push(ev);
 
                     // Re-process all events to update calendar display
-                    this.processEvents(this.events);
+                    this.processEvents(this.rawEvents);
                     this.closeEventModal();
                 }
             }

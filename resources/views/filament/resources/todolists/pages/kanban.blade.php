@@ -42,6 +42,7 @@
             @foreach ($statuses as $status)
                 <div 
                     class="kanban-column bg-gray-100 dark:bg-gray-900 rounded-xl p-4 flex flex-col gap-4 transition-colors duration-200"
+                    style="border-top: 3px solid {{ $status->color ?? '#6b7280' }};"
                     @dragover.prevent="if (draggingId) { event.dataTransfer.dropEffect = 'move'; }"
                     @drop="
                         if (draggingId) {
@@ -62,15 +63,10 @@
                     <!-- Column Header -->
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <div @class([
-                                'w-2 h-2 rounded-full',
-                                'bg-purple-500' => $status->name === 'Waiting List',
-                                'bg-blue-500' => $status->name === 'To do',
-                                'bg-orange-500' => $status->name === 'In Progress',
-                                'bg-pink-500' => $status->name === 'Pending',
-                                'bg-green-500' => $status->name === 'Completed',
-                                'bg-gray-500' => !in_array($status->name, ['Waiting List', 'To do', 'In Progress', 'Pending', 'Completed']),
-                            ])></div>
+                            <div 
+                                class="w-2 h-2 rounded-full flex-shrink-0"
+                                style="background-color: {{ $status->color ?? '#6b7280' }};"
+                            ></div>
                             <h3 class="font-semibold text-gray-900 dark:text-white">{{ $status->name }}</h3>
                             <span class="bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs px-2 py-0.5 rounded-full font-medium">
                                 {{ $todolists->where('status_id', $status->id)->count() }}
@@ -85,7 +81,30 @@
                                     View Archive
                                 </a>
                             @endif
-                            <x-filament::icon-button icon="heroicon-m-ellipsis-vertical" color="gray" size="sm" />
+                            <!-- Column Options Dropdown -->
+                            <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                                <button
+                                    @click.stop="open = !open"
+                                    class="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                                    title="Column options"
+                                >
+                                    <x-heroicon-m-ellipsis-vertical class="w-4 h-4" />
+                                </button>
+                                <div
+                                    x-show="open"
+                                    x-transition
+                                    class="absolute right-0 top-7 z-50 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1"
+                                >
+                                    <button
+                                        wire:click.stop="mountAction('editLookup', { id: {{ $status->id }} })"
+                                        @click="open = false"
+                                        class="w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                    >
+                                        <x-heroicon-m-pencil-square class="w-4 h-4 text-gray-400" />
+                                        Rename / Edit Color
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -189,6 +208,7 @@
             @endforeach
         </div>
     </div>
+    <x-filament-actions::modals />
 </x-filament-panels::page>
 
 

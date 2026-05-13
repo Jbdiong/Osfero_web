@@ -30,6 +30,10 @@ class EventForm
                     ->relationship('status', 'name', fn ($query) => $query->whereHas('parent', fn ($q) => $q->where('name', 'Event Status'))->orderBy('id'))
                     ->default(request()->query('status_id'))
                     ->required(),
+                Select::make('event_type_id')
+                    ->label('Event Type')
+                    ->relationship('type', 'name', fn ($query) => $query->whereHas('parent', fn ($q) => $q->where('name', 'Event Type')))
+                    ->default(null),
                 Select::make('tenant_id')
                     ->relationship('tenant', 'name')
                     ->required(),

@@ -19,6 +19,7 @@ class Event extends Model
         'end_time',
         'all_day',
         'status_id',
+        'event_type_id',
         'tenant_id',
         'customer_id',
     ];
@@ -42,6 +43,11 @@ class Event extends Model
     public function status(): BelongsTo
     {
         return $this->belongsTo(Lookup::class, 'status_id');
+    }
+
+    public function type(): BelongsTo
+    {
+        return $this->belongsTo(Lookup::class, 'event_type_id');
     }
 
     public function eventPICs(): \Illuminate\Database\Eloquent\Relations\MorphMany

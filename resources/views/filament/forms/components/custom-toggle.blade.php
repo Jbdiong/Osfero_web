@@ -14,7 +14,7 @@
                 :style="state ? 'left: calc(100% - 1.25rem)' : 'left: 0rem'"
             ></span>
         </button>
-        <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">Global Setting?</span>
+        <span class="ml-5 text-sm font-medium text-gray-900 dark:text-gray-300">Global Setting?</span>
     </div>
 </div>
 

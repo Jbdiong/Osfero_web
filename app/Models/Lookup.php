@@ -16,6 +16,9 @@ class Lookup extends Model
         'lookup_id',
         'parent_id',
         'tenant_id',
+        'user_id',
+        'color',
+        'sort_order',
     ];
 
     public function tenant(): BelongsTo
